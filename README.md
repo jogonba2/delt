@@ -70,7 +70,7 @@ This approach enables knowledge from highly capable models to be compressed into
 Every modality follows exactly the same workflow, so learning one modality means learning them all:
 
 <p align="center">
-  <img src="https://tfs.transperfect.com/tfs/Machine%20Translation/ae1314e0-3849-4f30-9588-e897a2bcc5ad/_apis/git/repositories/86e26523-eb09-4aae-b4b2-52214e055b32/items?path=/assets/pipeline.png&versionDescriptor%5BversionOptions%5D=0&versionDescriptor%5BversionType%5D=0&versionDescriptor%5Bversion%5D=main&resolveLfs=true&%24format=octetStream&api-version=5.0" alt="Pipeline" width="700"><br>
+  <img src="https://github.com/jogonba2/delt/blob/main/assets/pipeline.png" alt="Pipeline" width="700"><br>
   <strong>Figure 1.</strong> A pipeline in delt works in the same way for every modality.
 </p>
 
