@@ -431,7 +431,7 @@ wheels = [
 ]
 
 [[package]]
-name = "delt"
+name = "de-lt"
 version = "1.4.0"
 source = { editable = "." }
 dependencies = [

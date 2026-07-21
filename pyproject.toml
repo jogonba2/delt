@@ -9,11 +9,24 @@ package-dir = {"" = "src"}
 where = ["src"]
 
 [project]
-name = "delt"
+name = "de-lt"
 version = "1.4.0"
 description = "A Python framework for Label Tuning of Multimodal Dual Encoders."
 readme = "README.md"
 requires-python = ">=3.10,<3.12"
+license = { file = "LICENSE" }
+authors = [
+    { name = "José Ángel González", email = "ja.gonzalez.barba@gmail.com" }
+]
+keywords = ["deep-learning", "multimodal", "label tuning", "contrastive learning"]
+classifiers = [
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Operating System :: OS Independent",
+]
 dependencies = [
     "accelerate>=1.10.1",
     "datasets>=4.1.1",
@@ -35,6 +48,12 @@ dependencies = [
     "python-dotenv>=1.2.2",
     "litellm>=1.92.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/jogonba2/delt"
+Repository = "https://github.com/jogonba2/delt"
+Issues = "https://github.com/jogonba2/delt/issues"
+Documentation = "https://github.com/jogonba2/delt"
 
 [dependency-groups]
 dev = [
