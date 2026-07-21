@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project]
+name = "delt"
+version = "1.4.0"
+description = "A Python framework for Label Tuning of Multimodal Dual Encoders."
+readme = "README.md"
+requires-python = ">=3.10,<3.12"
+dependencies = [
+    "accelerate>=1.10.1",
+    "datasets>=4.1.1",
+    "protobuf>=6.32.1",
+    "scikit-learn>=1.7.2",
+    "sentence-transformers<=5.6.0",
+    "sentencepiece>=0.2.1",
+    "soundfile>=0.14.0",
+    "streamlit>=1.52.1",
+    "streamlit-audiorecorder>=0.0.6",
+    "transformers<6.0.0",
+    "torch==2.10.0",
+    "torchvision==0.25.0",
+    "torchaudio==2.10.0",
+    "glap-model>=0.0.13",
+    "av>=17.1.0",
+    "yt-dlp>=2026.6.9",
+    "torchcodec==0.10.0",
+    "python-dotenv>=1.2.2",
+    "litellm>=1.92.0",
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.18.1",
+    "ruff>=0.12.11",
+    "toml>=0.10.2",
+]
+
+[tool.mypy]
+ignore_missing_imports = true
+disable_error_code = "import-untyped"
