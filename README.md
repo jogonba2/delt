@@ -77,15 +77,19 @@ Every modality follows exactly the same workflow, so learning one modality means
 
 # 📦 Installation
 
-`delt` uses **uv** for dependency and environment management.
+You can install `delt` using either `uv` or `pip`:
 
 ```bash
-git clone https://tfs.transperfect.com/tfs/Machine Translation/AI R and D/_git/few-shot-classification
-cd few-shot-classification
-uv sync
+uv add deltpy
 ```
 
-For advanced use cases such as distillation with LLMs, you will need environment variables depending on the LLM you use (through LiteLLM):
+or
+
+```bash
+pip install deltpy
+```
+
+For some cases such as hard distillation with LLMs, you will need environment variables depending on the LLM you use (through LiteLLM):
 
 ```bash
 OPENAI_API_KEY=<KEY>
