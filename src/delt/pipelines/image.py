@@ -2,11 +2,11 @@
 
 import torch
 
-from delt.pipelines.base import Pipeline
+from delt.pipelines.base import EncoderPipeline
 from delt.types import Audio, Image, Video
 
 
-class ImagePipeline(Pipeline):
+class ImagePipeline(EncoderPipeline):
     """Pipeline for image training and inference."""
 
     def get_input_embeddings(

@@ -431,8 +431,8 @@ wheels = [
 ]
 
 [[package]]
-name = "de-lt"
-version = "1.4.0"
+name = "deltpy"
+version = "1.5.0"
 source = { editable = "." }
 dependencies = [
     { name = "accelerate" },

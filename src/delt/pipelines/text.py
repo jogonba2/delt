@@ -3,10 +3,10 @@
 import torch
 from PIL import Image
 
-from delt.pipelines.base import Pipeline
+from delt.pipelines.base import EncoderPipeline
 
 
-class TextPipeline(Pipeline):
+class TextPipeline(EncoderPipeline):
     """Pipeline for text training and inference."""
 
     def get_input_embeddings(

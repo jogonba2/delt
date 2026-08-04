@@ -10,6 +10,8 @@ from .encoders import (
 )
 from .pipelines import (
     AudioPipeline,
+    EmbeddingPipeline,
+    EncoderPipeline,
     ImagePipeline,
     TextPipeline,
     VideoPipeline,
@@ -27,5 +29,7 @@ __all__ = [
     "ImagePipeline",
     "AudioPipeline",
     "VideoPipeline",
+    "EmbeddingPipeline",
+    "EncoderPipeline",
     "LLMTextTeacher",
 ]
