@@ -7,7 +7,7 @@
 
 A Dual Encoder toolkit for zero-shot learning, label tuning, and distillation.
 
-[![License](https://img.shields.io/badge/license-CC_BY_NC_ND_4.0-green)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache_2.0-green)](LICENSE)
 [![Code of Conduct](https://img.shields.io/badge/Contributor%20Covenant-v2.0-green)](CODE_OF_CONDUCT.md)
 
 </div>
