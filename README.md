@@ -215,7 +215,7 @@ uv run streamlit run src/delt/ui/app.py
 
 # 📚 How to cite
 
-`delt` extends the label tuning strategy, introduced in (Müller Thomas, et al., 2022), for multimodal dual encoders. If `delt` contributes to your research, please consider citing the original paper.
+`delt` extends the label tuning strategy, introduced in (Müller Thomas, et al., 2022), for multimodal dual encoders. If `delt` contributes to your research, please consider citing the original paper and this repository:
 
 ```bibtex
 @inproceedings{muller-etal-2022-shot,
@@ -233,6 +233,15 @@ uv run streamlit run src/delt/ui/app.py
     publisher = "Association for Computational Linguistics",
     doi = "10.18653/v1/2022.acl-long.584",
     pages = "8532--8545",
+}
+
+@software{delt,
+  author       = {González, José Ángel and Aymo, Mahmoud and Bane, Fred},
+  title        = {DELT: A Python Library for Multimodal Label Tuning},
+  year         = {2026},
+  publisher    = {GitHub},
+  url          = {https://github.com/jogonba2/delt},
+  version      = {main}
 }
 ```
 
