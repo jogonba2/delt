@@ -5,7 +5,7 @@
 
 ### **Zero-shot and Few-shot Multimodal Classification with Label Tuning**
 
-A Dual Encoder toolkit for zero-shot learning, label tuning, and distillation.
+A toolkit for zero-shot, label tuning, and distillation with dual encoders.
 
 [![License](https://img.shields.io/badge/license-Apache_2.0-green)](LICENSE)
 [![Code of Conduct](https://img.shields.io/badge/Contributor%20Covenant-v2.0-green)](CODE_OF_CONDUCT.md)
