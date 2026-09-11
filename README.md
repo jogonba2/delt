@@ -103,105 +103,114 @@ The API is intentionally minimal. For examples of how to use `delt` for every mo
 ```python
 from delt import TextPipeline
 
+# Set your data and configure the encoder
+texts = ["I'm happy", "I'm sad", "You're strong", "Fuck you."]
+label_verbalizations = {
+    "positive": "really positive",
+    "negative": "really negative",
+}
+truths = [0, 1, 0, 1]
+prompt_template = "This text is {}"
+encoder_class = "sentence-transformer"
+encoder_name = "sentence-transformers/all-MiniLM-L6-v2"
+
 # Instantiate the pipeline
 pipeline = TextPipeline(
-    encoder_name="sentence-transformers/all-MiniLM-L6-v2",
-    encoder_class="sentence-transformer",
-    label_verbalizations={
-        "positive": "really positive",
-        "negative": "really negative",
-    },
-    prompt_template="This text is {}",
+    encoder_name, encoder_class, label_verbalizations, prompt_template
 )
 
-# Define your data
-texts = ["I'm happy", "I'm sad"]
-truths = [0, 1, 0, 1]
+# Zero-shot prediction
+preds = pipeline.predict(texts, batch_size=8)
 
-# Zero-shot
-predictions = pipeline.predict(texts)
+# Label-tuning training
+training_output = pipeline.fit(texts, truths)
 
-# Few-shot label tuning
-pipeline.train(texts, labels)
-
-# Predict again
-predictions = pipeline.predict(texts)
+# Prediction after training
+preds = pipeline.predict(texts, batch_size=8)
 ```
 
 The same design applies to **images**, **audio**, and **video**.
 
 # ⚡ Label tuning example
-If you already have precomputed embeddings and annotated training data, you can use label_tuning instead of the pipelines to train a classifier's label embeddings.
+If you already have precomputed embeddings and annotations, you can use the `EmbeddingPipeline` to train label embeddings and perform inference.
 
 ```python
 import torch
-from delt.predict import predict
-from delt.train import label_tuning
+from delt import EmbeddingPipeline
 
-# Input embeddings
-embeddings = torch.cat([torch.randn(100, 16), torch.randn(100, 16) + 2])
-labels = torch.cat(
-    [torch.zeros(100, dtype=torch.long), torch.ones(100, dtype=torch.long)]
+# Define your input embeddings
+input_embeddings = torch.vstack(
+    [torch.randn(100, 16), torch.randn(100, 16) + 2]
 )
 
-# Initial label embeddings
-label_embeddings = torch.stack([torch.randn(16), torch.randn(16) + 2])
+# Define your label embeddings
+label_embeddings = torch.vstack([torch.randn(1, 16), torch.randn(1, 16) + 2])
 
-# Fine-tune label embeddings
-output = label_tuning(
-    embeddings,
-    label_embeddings,
-    labels,
-    epochs=500,
-)
+# Define your truth labels
+truths = [0] * 100 + [1] * 100
 
-# Predict
-predictions = predict(
-    embeddings,
-    output.label_embeddings,
-    output.logit_scale,
-)
+# Instantiate the pipeline
+pipeline = EmbeddingPipeline(label_embeddings)
+
+# Zero-shot prediction
+preds = pipeline.predict(input_embeddings, batch_size=8)
+
+# Label-tuning training
+training_output = pipeline.fit(input_embeddings, truths)
+
+# Prediction after training
+preds = pipeline.predict(input_embeddings, batch_size=8)
 ```
 
 
 # 🧪 Distillation example
 
-Instead of manually annotating thousands of examples, a stronger model acts as a **teacher**, while `delt` learns a lightweight **student**.
+Instead of manually annotating thousands of examples, a stronger model can act as a **teacher**, while `delt` learns a lightweight **student**.
 
-Both **soft** and **hard** distillation are supported by `delt`. You can take a look to the [soft distillation](src/delt/examples/soft_distillation/) and [hard distillation](src/delt/examples/hard_distillation/) folders to see how it works. For the sake of this section's usefulness, here we show an example to distill `gpt-5.4-nano` into label embeddings for a sentiment analysis task:
+Both **soft** and **hard** distillation are supported by `delt`. You can take a look to the [soft distillation](src/delt/examples/soft_distillation/) and [hard distillation](src/delt/examples/hard_distillation/) folders to see how it works. Here we show an example to distill `gpt-5.4-nano` into label embeddings for a sentiment analysis task:
 
 ```python
 from delt.pipelines import TextPipeline
 from delt.teachers import LLMTextTeacher
 
-# Example data
+# Define your input data and label set
 texts = ["I hate you", "I love you"]
 label_set = ["positive", "negative"]
 
-# Generate training labels with an LLM
+# Instante the teacher model
 teacher = LLMTextTeacher(
-    model="gpt-5.4-nano",
-    model_kwargs={"temperature": 0},
-    instruction="Classify each text as positive or negative.",
+    "gpt-5.4-nano",
+    {"temperature": 0},
+    "Classify the following texts into positive or negative for a sentiment analysis task.",
 )
 
+# Generate the labels (`predict`) or probs (`predict_proba`)
 truths = teacher.predict(texts, label_set)
 
-# Create and train the student model
+# Create the label verbalizations (same order as the label set)
+label_verbalizations = {
+    "positive": "really positive",
+    "negative": "really negative",
+}
+
+# Set the encoder
+prompt_template = "This text is {}"
+encoder_class = "sentence-transformer"
+encoder_name = "sentence-transformers/all-MiniLM-L6-v2"
+
+# Instantiate the pipeline
 pipeline = TextPipeline(
-    encoder_name="sentence-transformers/all-MiniLM-L6-v2",
-    encoder_class="sentence-transformer",
-    label_verbalizations={
-        "positive": "really positive",
-        "negative": "really negative",
-    },
-    prompt_template="This text is {}",
+    encoder_name, encoder_class, label_verbalizations, prompt_template
 )
 
-pipeline.fit(texts, truths)
+# Zero-shot prediction
+preds = pipeline.predict(texts, batch_size=8)
 
-# Predict
-predictions = pipeline.predict(texts)
+# Label-tuning to train the student model
+training_output = pipeline.fit(texts, truths)
+
+# Prediction after training
+preds = pipeline.predict(texts, batch_size=8)
 ```
 
 
