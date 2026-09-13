@@ -16,7 +16,7 @@ A toolkit for zero-shot, label tuning, and distillation with dual encoders.
 
 ## 👋 DELT
 
-Interactive applications where embeddings are persistent assets favor efficient zero-shot classification to support personalization, but further adaptation typically requires retraining the underlying encoder. Label tuning offers an efficient alternative by adapting only the label embeddings, enabling the reuse of precomputed embeddings. `delt` allows you to operationalize label tuning in embedding-based applications, supporting:
+Applications where embeddings serve as persistent representations—such as semantic search, recommendation, document ranking, and RAG—benefit from efficient zero-shot classification based on similarities between input and label embeddings, enabling personalized retrieval. However, adapting these representations to evolving user preferences typically requires retraining the underlying encoder. Label tuning offers an efficient alternative by adapting only the label embeddings, enabling the reuse of precomputed embeddings. `delt` allows you to operationalize label tuning in embedding-based applications, supporting:
 
 - 🚀 Perform **zero-shot classification** without training data.
 - 🎯 Fine-tune classifiers using only a few labeled examples through **label tuning**.
@@ -28,7 +28,7 @@ Interactive applications where embeddings are persistent assets favor efficient 
 Whether you have **zero**, **ten**, or **millions** annotated samples, `delt` provides a simple pipeline that scales with your data.
 
 <p align="center">
-  <img src="assets/delt_diagram.png" alt="Diagram" width="600"><br>
+  <img src="https://raw.githubusercontent.com/jogonba2/delt/refs/heads/main/assets/delt_diagram.png" alt="Diagram" width="600"><br>
   <strong>Figure 1.</strong> DELT diagram.
 </p>
 
@@ -226,7 +226,7 @@ uv run streamlit run src/delt/ui/app.py
 ```
 
 <p align="center">
-  <img src="assets/ui.png" alt="UI" width="600"><br>
+  <img src="https://raw.githubusercontent.com/jogonba2/delt/refs/heads/main/assets/ui.png" alt="UI" width="600"><br>
   <strong>Figure 3.</strong> <code>delt</code> playground.
 </p>
 
