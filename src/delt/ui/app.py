@@ -116,29 +116,31 @@ with st.expander(
     ```python
     from delt import TextPipeline
 
+    # Set your data and configure the encoder
+    texts = ["I'm happy", "I'm sad", "You're strong", "I hate you."]
+    label_verbalizations = {
+        "positive": "really positive",
+        "negative": "really negative",
+    }
+    truths = [0, 1, 0, 1]
+    prompt_template = "This text is {}"
+    encoder_class = "sentence-transformer"
+    encoder_name = "sentence-transformers/all-MiniLM-L6-v2"
+
     # Instantiate the pipeline
     pipeline = TextPipeline(
-        encoder_name="sentence-transformers/all-MiniLM-L6-v2",
-        encoder_class="sentence-transformer",
-        label_verbalizations={
-            "positive": "really positive",
-            "negative": "really negative",
-        },
-        prompt_template="This text is {}",
+        encoder_name, encoder_class, label_verbalizations, prompt_template
     )
 
-    # Define your data
-    texts = ["I'm happy", "I'm sad"]
-    truths = [0, 1, 0, 1]
+    # Zero-shot prediction
+    preds = pipeline.predict(texts, batch_size=8)
 
-    # Zero-shot
-    predictions = pipeline.predict(texts)
+    # Label-tuning training
+    training_output = pipeline.fit(texts, truths)
 
-    # Few-shot label tuning
-    pipeline.train(texts, labels)
-
-    # Predict again
-    predictions = pipeline.predict(texts)```""")
+    # Prediction after training
+    preds = pipeline.predict(texts, batch_size=8)
+    """)
 st.write("---")
 
 
@@ -213,7 +215,7 @@ with tab_text:
         st.markdown("**Data Inputs**")
         texts_input = st.text_area(
             "Texts (one per line)",
-            "I'm happy\nI'm sad\nYou're strong\nFuck you.",
+            "I'm happy\nI'm sad\nYou're strong\nI hate you.",
             height=120,
         )
         truths_input_t = st.text_input(

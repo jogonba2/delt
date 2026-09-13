@@ -203,14 +203,16 @@ def label_tuning_cv(
         scores = []
 
         for train_fold, val_fold in zip(train_folds, val_folds):
-            tuned_label_embeddings, logit_scale = label_tuning(
+            output = label_tuning(
                 train_fold["x"],
                 label_embeddings,
                 train_fold["y"],
                 **experiment_params,
             )
 
-            preds = predict(val_fold["x"], tuned_label_embeddings, logit_scale)
+            preds = predict(
+                val_fold["x"], output.label_embeddings, output.logit_scale
+            )
             preds = [pred.label for pred in preds]
 
             scores.append(f1_score(val_fold["y"], preds, average="macro"))

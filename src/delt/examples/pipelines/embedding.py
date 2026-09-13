@@ -22,7 +22,7 @@ pipeline = EmbeddingPipeline(label_embeddings)
 preds = pipeline.predict(input_embeddings, batch_size=8)
 
 # Label-tuning training
-training_output = pipeline.fit(input_embeddings, truths)
+training_output = pipeline.fit(input_embeddings, truths, do_cv=True)
 
 # Prediction after training
 preds = pipeline.predict(input_embeddings, batch_size=8)

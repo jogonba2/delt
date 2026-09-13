@@ -3,7 +3,7 @@
 from delt import TextPipeline
 
 # Set your data and configure the encoder
-texts = ["I'm happy", "I'm sad", "You're strong", "Fuck you."]
+texts = ["I'm happy", "I'm sad", "You're strong", "I hate you."]
 label_verbalizations = {
     "positive": "really positive",
     "negative": "really negative",

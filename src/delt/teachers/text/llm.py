@@ -9,9 +9,9 @@ from delt.teachers.base import Teacher
 
 class LLMTextTeacher(Teacher):
     """
-    LLM-based teacher for video classification.
+    LLM-based teacher for text classification.
 
-    Generates structured predictions from video inputs using LiteLLM.
+    Generates structured predictions from text inputs using LiteLLM.
     """
 
     def __init__(

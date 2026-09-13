@@ -15,9 +15,8 @@ A toolkit for zero-shot, label tuning, and distillation with dual encoders.
 ---
 
 ## 👋 DELT
-Building high-quality classifiers usually requires collecting thousands of labeled examples or relying on strong models with large resource conssumption. `delt` was built for the situations where that simply is not practical, adopting dual encoders as backbone.
 
-With `delt` you can:
+Interactive applications where embeddings are persistent assets favor efficient zero-shot classification to support personalization, but further adaptation typically requires retraining the underlying encoder. Label tuning offers an efficient alternative by adapting only the label embeddings, enabling the reuse of precomputed embeddings. `delt` allows you to operationalize label tuning in embedding-based applications, supporting:
 
 - 🚀 Perform **zero-shot classification** without training data.
 - 🎯 Fine-tune classifiers using only a few labeled examples through **label tuning**.
@@ -28,6 +27,10 @@ With `delt` you can:
 
 Whether you have **zero**, **ten**, or **millions** annotated samples, `delt` provides a simple pipeline that scales with your data.
 
+<p align="center">
+  <img src="assets/delt_diagram.png" alt="Diagram" width="600"><br>
+  <strong>Figure 1.</strong> DELT diagram.
+</p>
 
 # ✨ How it works
 
@@ -70,8 +73,8 @@ This approach enables knowledge from highly capable models to be compressed into
 Every modality follows exactly the same workflow, so learning one modality means learning them all:
 
 <p align="center">
-  <img src="https://github.com/jogonba2/delt/blob/main/assets/pipeline.png" alt="Pipeline" width="700"><br>
-  <strong>Figure 1.</strong> A pipeline in delt works in the same way for every modality.
+  <img src="https://raw.githubusercontent.com/jogonba2/delt/refs/heads/main/assets/pipeline.png" alt="Pipeline" width="600"><br>
+  <strong>Figure 2.</strong> A pipeline in delt works in the same way for every modality.
 </p>
 
 
@@ -104,7 +107,7 @@ The API is intentionally minimal. For examples of how to use `delt` for every mo
 from delt import TextPipeline
 
 # Set your data and configure the encoder
-texts = ["I'm happy", "I'm sad", "You're strong", "Fuck you."]
+texts = ["I'm happy", "I'm sad", "You're strong", "I hate you."]
 label_verbalizations = {
     "positive": "really positive",
     "negative": "really negative",
@@ -221,6 +224,11 @@ preds = pipeline.predict(texts, batch_size=8)
 ```bash
 uv run streamlit run src/delt/ui/app.py
 ```
+
+<p align="center">
+  <img src="assets/ui.png" alt="UI" width="600"><br>
+  <strong>Figure 3.</strong> <code>delt</code> playground.
+</p>
 
 # 📚 How to cite
 
