@@ -22,10 +22,10 @@ jobs:
         run: uv python install 3.11
 
       - name: Install dependencies
-        run: uv sync
+        run: uv sync --python 3.11
 
       - name: Run tests
-        run: ./dev-tools/test.sh
+        run: uv run ./dev-tools/test.sh
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v5
