@@ -9,7 +9,8 @@ A toolkit for zero-shot, label tuning, and distillation with dual encoders.
 
 [![License](https://img.shields.io/badge/license-Apache_2.0-green)](LICENSE)
 [![Code of Conduct](https://img.shields.io/badge/Contributor%20Covenant-v2.0-green)](CODE_OF_CONDUCT.md)
-
+![Code coverage](https://codecov.io/gh/jogonba2/delt/branch/main/graph/badge.svg)
+![PyPI](https://img.shields.io/pypi/v/deltpy)
 </div>
 
 ---
