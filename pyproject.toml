@@ -43,7 +43,6 @@ dependencies = [
     "torchaudio==2.10.0",
     "glap-model>=0.0.13",
     "av>=17.1.0",
-    "yt-dlp>=2026.6.9",
     "torchcodec==0.10.0",
     "python-dotenv>=1.2.2",
     "litellm>=1.92.0",

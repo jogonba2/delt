@@ -2,7 +2,6 @@
 
 import gc
 import json
-import subprocess
 
 import PIL.Image
 import requests
@@ -566,7 +565,7 @@ with tab_video:
         st.subheader("Execution & Results")
         if run_video:
             with st.spinner(
-                "Downloading video clips via yt-dlp and processing pipeline..."
+                "Downloading video clips and processing pipeline..."
             ):
                 try:
                     label_verbalizations = json.loads(labels_input_v)
