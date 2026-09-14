@@ -10,13 +10,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - uses: actions/setup-python@v5
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
         with:
-          python-version: "3.11"
+          enable-cache: true
 
-      - run: pip install -r requirements.txt
+      - name: Set up Python
+        run: uv python install 3.11
 
-      - run: chmod +x test.sh
-      - run: ./test.sh
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Run tests
+        run: ./test.sh
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
