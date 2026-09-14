@@ -144,32 +144,12 @@ with st.expander(
 st.write("---")
 
 
-# Helper function to stream download youtube video bytes
-def download_youtube_video(url: str) -> bytes:
-    """
-    Download a video from Youtube.
-
-    Args:
-        url (str): the url of the video.
-
-    Returns:
-        bytes: the video as bytes.
-
-    """
-    result = subprocess.run(
-        [
-            "yt-dlp",
-            "-f",
-            "worst[ext=mp4]",
-            "-o",
-            "-",
-            url,
-        ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=True,
-    )
-    return result.stdout
+# Helper function to stream download video bytes
+def download_video(url: str) -> bytes:
+    """Download a video from a direct HTTP(S) URL and return it as bytes."""
+    response = requests.get(url, timeout=60)
+    response.raise_for_status()
+    return response.content
 
 
 # -----------------------------------------------------------------------------
@@ -557,27 +537,27 @@ with tab_video:
             "Encoder Class", "xclip", key="ec_v", disabled=True
         )
         prompt_template_v = st.text_input(
-            "Prompt Template", "The video shows a {}", key="pt_v"
+            "Prompt Template", "The video shows a {} face.", key="pt_v"
         )
 
         st.markdown("**Label Verbalizations (JSON format)**")
         labels_input_v = st.text_area(
             "Labels mapping",
-            '{"programming": "programming course",\n "anime": "anime tv show",\n "french song": "french song"}',
-            #'{\n  "programming": "programming course",\n  "spaghetti": "man eating spaghetti",\n  "dog": "brown dog",\n  "penguin": "a penguin",\n  "song": "a french song"\n}',
+            '{"fake": "fake",\n "real": "real"}',
             height=150,
             key="lbl_v",
         )
 
-        st.markdown("**YouTube Source URLs (one per line)**")
+        st.markdown("**Source URLs (one per line)**")
         video_urls_input = st.text_area(
             "URLs",
-            "https://www.youtube.com/watch?v=R2mO_XFiXKc\nhttps://www.youtube.com/watch?v=LpNVf8sczqU",
+            "https://huggingface.co/datasets/dfb-data/deep-fake-detection-cropped/resolve/4850ffa259634a34ef92bb741d79baddc22cfb47/1/DFDC_Dataset/Fake/aaaoqepxnf.mp4\n"
+            "https://huggingface.co/datasets/dfb-data/deep-fake-detection-cropped/resolve/4850ffa259634a34ef92bb741d79baddc22cfb47/1/DFDC_Dataset/Real/ykofirxynw.mp4",
             height=100,
             key="url_v",
         )
         truths_input_v = st.text_input(
-            "Ground Truth Labels (Indices for Training)", "1, 2", key="tr_v"
+            "Ground Truth Labels (Indices for Training)", "0, 1", key="tr_v"
         )
 
         run_video = st.button("🚀 Run Video Pipelines", type="primary")
@@ -601,7 +581,7 @@ with tab_video:
 
                     videos = []
                     for url in urls:
-                        video_bytes = download_youtube_video(url)
+                        video_bytes = download_video(url)
                         videos.append(video_bytes)
 
                     st.markdown("### 📹 Input Preview")

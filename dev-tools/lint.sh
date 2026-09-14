@@ -9,15 +9,15 @@ uv run ruff check \
     --select ANN \
     --ignore ANN401 \
     --exclude src/delt/ui/app.py \
-    src/delt
+    src/delt tests
 
 # Run static type checking
 uv run mypy \
     --exclude 'src/delt/ui/app\.py$' \
-    src/delt
+    src/delt tests
 
 # Enforce cyclomatic complexity < 10
 uv run ruff check \
     --select C901 \
     --exclude src/delt/ui/app.py \
-    src/delt
+    src/delt tests

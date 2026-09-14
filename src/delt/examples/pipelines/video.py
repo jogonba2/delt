@@ -1,50 +1,37 @@
 """Example script for the video pipeline."""
 
-import subprocess
+import requests
 
 from delt import VideoPipeline
 
 
-def download_youtube_video(url: str) -> bytes:
-    """
-    Download a video from Youtube.
-
-    Args:
-        url (str): the url of the video.
-
-    Returns:
-        bytes: the video as bytes.
-
-    """
-    result = subprocess.run(
-        [
-            "yt-dlp",
-            "-f",
-            "worst[ext=mp4]",
-            "-o",
-            "-",
-            url,
-        ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=True,
-    )
-    return result.stdout
+def download_video(url: str) -> bytes:
+    """Download a video from a direct HTTP(S) URL and return it as bytes."""
+    response = requests.get(url, timeout=60)
+    response.raise_for_status()
+    return response.content
 
 
 # Set your data and configure the encoder
 videos = [
-    download_youtube_video("https://www.youtube.com/watch?v=R2mO_XFiXKc"),
-    download_youtube_video("https://www.youtube.com/watch?v=LpNVf8sczqU"),
+    download_video(
+        "https://huggingface.co/datasets/dfb-data/deep-fake-detection-cropped/"
+        "resolve/4850ffa259634a34ef92bb741d79baddc22cfb47/"
+        "1/DFDC_Dataset/Fake/aaaoqepxnf.mp4"
+    ),
+    download_video(
+        "https://huggingface.co/datasets/dfb-data/deep-fake-detection-cropped/"
+        "resolve/4850ffa259634a34ef92bb741d79baddc22cfb47/"
+        "1/DFDC_Dataset/Real/ykofirxynw.mp4"
+    ),
 ]
 
 label_verbalizations = {
-    "programming": "programming course",
-    "anime": "anime tv show",
-    "french song": "french song",
+    "fake": "fake",
+    "real": "real",
 }
-truths = [1, 2]
-prompt_template = "The video shows a {}"
+truths = [0, 1]
+prompt_template = "The video shows a {} face."
 encoder_class = "xclip"
 encoder_name = "microsoft/xclip-base-patch16-zero-shot"
 

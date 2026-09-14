@@ -268,6 +268,8 @@ uv run streamlit run src/delt/ui/app.py
 Contributions are always welcome. Please make sure to:
 
 - Install the development dependencies
-- Format your code before submitting
+- Format your code before submitting as `./dev-tools/format.sh`
+- Lint your code before submitting as `./dev-tools/lint.sh`
+- Run the test suite as `./dev-tools/test.sh`
 - Follow the project's coding standards
 - Open discussions for larger feature proposals

@@ -10,7 +10,7 @@ where = ["src"]
 
 [project]
 name = "deltpy"
-version = "1.5.1"
+version = "1.5.2"
 description = "A Python framework for Label Tuning of Multimodal Dual Encoders."
 readme = "README.md"
 requires-python = ">=3.10,<3.12"
@@ -58,6 +58,8 @@ Documentation = "https://github.com/jogonba2/delt"
 [dependency-groups]
 dev = [
     "mypy>=1.18.1",
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
     "ruff>=0.12.11",
     "toml>=0.10.2",
 ]

@@ -1,4 +1,4 @@
-"""Example script for label tuning training."""
+"""Example script for label tuning training, without using the `EmbeddingPipeline`."""
 
 import torch
 

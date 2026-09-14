@@ -181,7 +181,7 @@ def label_tuning_cv(
 
     """
     n_samples = len(truths)
-    min_class_size = min(Counter(truths).values())
+    min_class_size = min(Counter(truths.tolist()).values())
     n_splits = min(num_splits, n_samples, min_class_size)
 
     if n_splits < 2:

@@ -1,52 +1,39 @@
 """Example script for the video pipeline with LMM distillation."""
 
-import subprocess
+import requests
 
 from delt.pipelines import VideoPipeline
 from delt.teachers import LMMVideoTeacher
 
 
-def download_youtube_video(url: str) -> bytes:
-    """
-    Download a video from Youtube.
-
-    Args:
-        url (str): the url of the video.
-
-    Returns:
-        bytes: the video as bytes.
-
-    """
-    result = subprocess.run(
-        [
-            "yt-dlp",
-            "-f",
-            "worst[ext=mp4]",
-            "-o",
-            "-",
-            url,
-        ],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        check=True,
-    )
-    return result.stdout
+def download_video(url: str) -> bytes:
+    """Download a video from a direct HTTP(S) URL and return it as bytes."""
+    response = requests.get(url, timeout=60)
+    response.raise_for_status()
+    return response.content
 
 
 # Set your data and configure the encoder
 videos = [
-    download_youtube_video("https://www.youtube.com/watch?v=tPEE9ZwTmy0"),
-    download_youtube_video("https://www.youtube.com/watch?v=BsIRoA99bBY"),
+    download_video(
+        "https://huggingface.co/datasets/dfb-data/deep-fake-detection-cropped/"
+        "resolve/4850ffa259634a34ef92bb741d79baddc22cfb47/"
+        "1/DFDC_Dataset/Fake/aaaoqepxnf.mp4"
+    ),
+    download_video(
+        "https://huggingface.co/datasets/dfb-data/deep-fake-detection-cropped/"
+        "resolve/4850ffa259634a34ef92bb741d79baddc22cfb47/"
+        "1/DFDC_Dataset/Real/ykofirxynw.mp4"
+    ),
 ]
 
-label_set = ["cat", "dog", "person"]
-
+label_set = ["fake", "real"]
 
 # Instante the teacher model
 teacher = LMMVideoTeacher(
     "gemini/gemini-3.5-flash",
     {"temperature": 0},
-    "Classify the following texts into bell or morse",
+    "Classify the following videos into fake or real.",
 )
 
 # Generate the labels (`predict`) or probs (`predict_proba`)
@@ -54,11 +41,10 @@ truths = teacher.predict(videos, label_set)
 
 # Create the label verbalizations (same order as the label set)
 label_verbalizations = {
-    "cat": "a cat",
-    "dog": "a dog",
-    "person": "a person",
+    "fake": "fake",
+    "real": "real",
 }
-prompt_template = "The video shows a {}"
+prompt_template = "The video shows a {} face."
 encoder_class = "xclip"
 encoder_name = "microsoft/xclip-base-patch16-zero-shot"
 
