@@ -7,10 +7,10 @@ from .text import TextPipeline
 from .video import VideoPipeline
 
 __all__ = [
+    "AudioPipeline",
     "EmbeddingPipeline",
     "EncoderPipeline",
-    "TextPipeline",
     "ImagePipeline",
-    "AudioPipeline",
+    "TextPipeline",
     "VideoPipeline",
 ]

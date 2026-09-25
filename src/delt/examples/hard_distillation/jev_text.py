@@ -1,21 +1,29 @@
-"""Example script for the text pipeline with LLM distillation."""
+"""Example script for the text pipeline with Jev distillation."""
+
+import os
+
+from dotenv import load_dotenv
 
 from delt.pipelines import TextPipeline
-from delt.teachers import LLMTextTeacher
+from delt.teachers import JevTextTeacher
+
+load_dotenv()
 
 # Define your input data and label set
 texts = ["I hate you", "I love you"]
 label_set = ["positive", "negative"]
 
-# Instantiate the teacher model
-teacher = LLMTextTeacher(
-    "gpt-5.4-nano",
-    {"temperature": 0},
-    "Classify the following texts into positive or negative for a sentiment analysis task.",
+# Instantiate the teacher model (through OpenRouter, although any provider is supported)
+teacher = JevTextTeacher(
+    "jev-latest",
+    "What is the sentiment of this text?",
+    "User text: {}",
+    base_url="https://openrouter.ai/api",
+    api_key=os.environ["OPENROUTER_API_KEY"],
 )
 
 # Generate the labels (`predict`) or probs (`predict_proba`)
-truths = teacher.predict(texts, label_set)
+truth_probas = teacher.predict_proba(texts, label_set)
 
 # Create the label verbalizations (same order as the label set)
 label_verbalizations = {
@@ -37,7 +45,7 @@ pipeline = TextPipeline(
 preds = pipeline.predict(texts, batch_size=8)
 
 # Label-tuning to train the student model
-training_output = pipeline.fit(texts, truths)
+training_output = pipeline.fit(texts, truth_probas)
 
 # Prediction after training
 preds = pipeline.predict(texts, batch_size=8)

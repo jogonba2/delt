@@ -93,7 +93,6 @@ class AudioEncoder(Encoder):
             torch.Tensor: The image embeddings.
 
         """
-        ...
 
     @abstractmethod
     def get_audio_embeddings(
@@ -126,4 +125,3 @@ class AudioEncoder(Encoder):
             torch.Tensor: The video embeddings.
 
         """
-        ...

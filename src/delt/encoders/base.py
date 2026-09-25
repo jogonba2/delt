@@ -1,7 +1,6 @@
 """Encoder base model for zero-shot text classification and label-tuning."""
 
 from abc import ABC, abstractmethod
-from typing import Optional
 
 import torch
 from transformers import (
@@ -131,7 +130,7 @@ class Encoder(ABC):
         """
         ...
 
-    def freeze_params(self, param_names: Optional[set[str]] = None) -> None:
+    def freeze_params(self, param_names: set[str] | None = None) -> None:
         """
         Freeze the params of the encoder model.
 
@@ -143,7 +142,7 @@ class Encoder(ABC):
             if param_names is None or name in param_names:
                 param.requires_grad = False
 
-    def unfreeze_params(self, param_names: Optional[set[str]] = None) -> None:
+    def unfreeze_params(self, param_names: set[str] | None = None) -> None:
         """
         Unfreeze the params of the encoder model.
 

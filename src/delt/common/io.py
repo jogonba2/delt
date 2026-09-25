@@ -1,10 +1,9 @@
 """Module for io utils."""
 
 from base64 import b64encode
-from typing import Optional
 
 
-def base64_encode(data: bytes, mime_type: Optional[str] = None) -> str:
+def base64_encode(data: bytes, mime_type: str | None = None) -> str:
     """
     Encode a `bytes` object into base64.
 

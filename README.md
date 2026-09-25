@@ -57,7 +57,7 @@ and the label
 
 where ❄️ and 🔥 refer to frozen and trainable parameters. Unlike traditional training methods, the encoder remains frozen while only the label representations are optimized. In practice, the trainable component contains only (number_of_labels × embedding_dimension) parameters, making label tuning remarkably efficient while preserving the knowledge of the original embedding model.
 
-When human-annotated data is unavailable and zero-shot methods do not deliver sufficient performance, delt provides distillation as an alternative. It supports both **soft distillation**, where label embeddings are fine-tuned to match the probability distribution produced by more powerful but computationally expensive models, and **hard distillation**, where label embeddings are fine-tuned to reproduce the labels predicted by models that do not provide class probabilities (e.g., LLMs and LMMs).
+When human-annotated data is unavailable and zero-shot methods do not deliver sufficient performance, delt provides distillation as an alternative. It supports both **soft distillation**, where label embeddings are fine-tuned to match the probability distribution produced by more powerful but computationally expensive models, and **hard distillation**, where label embeddings are fine-tuned to reproduce the labels predicted by models that do not provide class probabilities (e.g., LLMs, LMMs, and Jev).
 This approach enables knowledge from highly capable models to be compressed into a relatively small set of parameters, making it practical to deploy their capabilities in large-scale applications where running an LLM or LMM on every example would be prohibitively expensive. You can just select a random set of your million documents, annotate it with an LLM, train a model with `delt`, and predict all the remaining data with your brand new model in a more efficient way.
 
 # 🚀 Supported modalities
@@ -93,11 +93,13 @@ or
 pip install deltpy
 ```
 
-For some cases such as hard distillation with LLMs, you will need environment variables depending on the LLM you use (through LiteLLM):
+For some cases such as hard distillation with LLMs or Jev, you will need environment variables depending on the LLM you use (through LiteLLM):
 
 ```bash
-OPENAI_API_KEY=<KEY>
-GEMINI_API_KEY=<KEY>
+OPENAI_API_KEY=...
+GEMINI_API_KEY=...
+OPENROUTER_API_KEY=...
+TYPESAFE_API_KEY=...
 ```
 
 # 🚀 Pipeline example

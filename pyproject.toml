@@ -46,6 +46,7 @@ dependencies = [
     "torchcodec==0.10.0",
     "python-dotenv>=1.2.2",
     "litellm>=1.92.0",
+    "typesafe-sdk>=0.7.1",
 ]
 
 [project.urls]

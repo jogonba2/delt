@@ -19,17 +19,17 @@ from .pipelines import (
 from .teachers import LLMTextTeacher
 
 __all__ = [
-    "SentenceTransformerEncoder",
-    "ClipEncoder",
-    "SiglipEncoder",
-    "ClapEncoder",
-    "XclipEncoder",
-    "get_encoder",
-    "TextPipeline",
-    "ImagePipeline",
     "AudioPipeline",
-    "VideoPipeline",
+    "ClapEncoder",
+    "ClipEncoder",
     "EmbeddingPipeline",
     "EncoderPipeline",
+    "ImagePipeline",
     "LLMTextTeacher",
+    "SentenceTransformerEncoder",
+    "SiglipEncoder",
+    "TextPipeline",
+    "VideoPipeline",
+    "XclipEncoder",
+    "get_encoder",
 ]
