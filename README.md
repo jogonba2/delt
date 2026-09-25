@@ -81,19 +81,13 @@ Every modality follows exactly the same workflow, so learning one modality means
 
 # 📦 Installation
 
-You can install `delt` using either `uv` or `pip`:
+You can install `delt` using as:
 
 ```bash
 uv add deltpy
 ```
 
-or
-
-```bash
-pip install deltpy
-```
-
-For some cases such as hard distillation with LLMs or Jev, you will need environment variables depending on the LLM you use (through LiteLLM):
+For some cases such as hard distillation with LLMs, LMMs, or Jev, you will need environment variables depending on the model and provider you use:
 
 ```bash
 OPENAI_API_KEY=...
@@ -101,6 +95,11 @@ GEMINI_API_KEY=...
 OPENROUTER_API_KEY=...
 TYPESAFE_API_KEY=...
 ```
+
+> 🎧 **On FFmpeg issues**
+>
+> `ffmpeg` is required for audio processing by `libtorchcodec`, which is used by the audio processors. Please install an `ffmpeg` version compatible with `torchaudio==2.10.0`. Versions 4, 5, 6, 7, and 8 are supported.
+> Make sure `ffmpeg` is correctly installed and available in your `PATH` so that Torch can load it properly.
 
 # 🚀 Pipeline example
 
