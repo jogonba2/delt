@@ -10,7 +10,7 @@ where = ["src"]
 
 [project]
 name = "deltpy"
-version = "1.5.2"
+version = "1.6.2"
 description = "A Python framework for Label Tuning of Multimodal Dual Encoders."
 readme = "README.md"
 requires-python = ">=3.10,<3.12"
