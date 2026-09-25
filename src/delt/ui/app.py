@@ -64,7 +64,7 @@ with st.expander(
     expanded=False,
 ):
     st.markdown(
-        """
+        r"""
         ### 📊 System Capabilities
         This library is designed to train, run predictions, and evaluate dual-encoder models across **text, image, audio, and video data**. It supports two main modes:
         * **Zero-Shot Mode:** The system uses pre-trained embeddings to perform classification **out of the box** without requiring any training data.

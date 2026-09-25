@@ -15,7 +15,7 @@ images = [
 ]
 label_set = ["cat", "dog"]
 
-# Instante the teacher model
+# Instantiate the teacher model
 teacher = LMMImageTeacher(
     "gemini/gemini-3.5-flash",
     {"temperature": 0},

@@ -15,7 +15,7 @@ morse = requests.get(
 audios = [bell, morse]
 label_set = ["bell", "morse"]
 
-# Instante the teacher model
+# Instantiate the teacher model
 teacher = LMMAudioTeacher(
     "gemini/gemini-3.5-flash",
     {"temperature": 0},

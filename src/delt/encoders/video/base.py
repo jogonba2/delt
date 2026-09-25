@@ -96,7 +96,6 @@ class VideoEncoder(Encoder):
             torch.Tensor: The image embeddings.
 
         """
-        ...
 
     def get_audio_embeddings(
         self, audios: list[Audio], batch_size: int = 16
@@ -112,7 +111,6 @@ class VideoEncoder(Encoder):
             torch.Tensor: The audio embeddings.
 
         """
-        ...
 
     @abstractmethod
     def get_video_embeddings(

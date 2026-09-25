@@ -29,7 +29,7 @@ videos = [
 
 label_set = ["fake", "real"]
 
-# Instante the teacher model
+# Instantiate the teacher model
 teacher = LMMVideoTeacher(
     "gemini/gemini-3.5-flash",
     {"temperature": 0},

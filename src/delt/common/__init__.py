@@ -8,14 +8,14 @@ from .logging import get_logger
 from .prompting import format_prompt, make_output_model
 
 __all__ = [
-    "get_logger",
-    "format_prompt",
-    "unimodal_kfold",
-    "dict_cartesian_product",
+    "base64_encode",
     "batchify",
     "batchify_tensor",
+    "dict_cartesian_product",
+    "format_prompt",
     "generate_completion",
     "generate_completions",
-    "base64_encode",
+    "get_logger",
     "make_output_model",
+    "unimodal_kfold",
 ]

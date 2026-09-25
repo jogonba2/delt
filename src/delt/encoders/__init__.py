@@ -41,12 +41,12 @@ def get_encoder(class_name: str, *args: Any, **kwargs: Any) -> Encoder:
 
 
 __all__ = [
-    "Encoder",
-    "SentenceTransformerEncoder",
-    "ClipEncoder",
-    "GlapEncoder",
-    "SiglipEncoder",
     "ClapEncoder",
+    "ClipEncoder",
+    "Encoder",
+    "GlapEncoder",
+    "SentenceTransformerEncoder",
+    "SiglipEncoder",
     "XclipEncoder",
     "get_encoder",
 ]

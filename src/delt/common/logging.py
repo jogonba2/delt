@@ -2,10 +2,10 @@
 
 import logging
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
-_time = datetime.now()
+_time = datetime.now(timezone.utc)
 
 COLORS = {
     "grey": "\x1b[38;20m",

@@ -46,7 +46,7 @@ def sample_frame_indices(
     clip_len: int = 32,
     frame_sample_rate: int = 4,
     seed: int = 13,
-):
+) -> np.ndarray:
     """
     Generate a sequence of frame indices via randomized temporal sampling.
 
