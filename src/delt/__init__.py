@@ -13,6 +13,7 @@ from .pipelines import (
     EmbeddingPipeline,
     EncoderPipeline,
     ImagePipeline,
+    SpanPipeline,
     TextPipeline,
     VideoPipeline,
 )
@@ -28,6 +29,7 @@ __all__ = [
     "LLMTextTeacher",
     "SentenceTransformerEncoder",
     "SiglipEncoder",
+    "SpanPipeline",
     "TextPipeline",
     "VideoPipeline",
     "XclipEncoder",

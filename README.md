@@ -136,6 +136,25 @@ preds = pipeline.predict(texts, batch_size=8)
 
 The same design applies to **images**, **audio**, and **video**.
 
+## Span detection and classification
+
+`SpanPipeline` extends text label tuning to span tasks such as NER or aspect-based sentiment analysis. Rather than BIO tagging, which would add `B-`/`I-` noise to the label embeddings, every contiguous span of up to `max_span_width` tokens is a candidate. Each candidate is embedded from its text and classified against the label embeddings, plus a trainable "none" class for candidates that are not spans of interest. See the [span example](src/delt/examples/pipelines/span.py).
+
+```python
+from delt import SpanPipeline
+from delt.types import SpanAnnotation
+
+pipeline = SpanPipeline(
+    "sentence-transformers/all-MiniLM-L6-v2",
+    "sentence-transformer",
+    {"person": "a person name", "location": "a place name"},
+    "This is {}",
+)
+# `truths` has one list of `SpanAnnotation(start, end, label)` per text (character offsets, `end` exclusive)
+pipeline.fit(texts, truths)
+spans = pipeline.predict(texts, threshold=0.5, overlap="flat")  # list[list[Span]]
+```
+
 # ⚡ Label tuning example
 If you already have precomputed embeddings and annotations, you can use the `EmbeddingPipeline` to train label embeddings and perform inference.
 
