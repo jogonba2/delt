@@ -100,6 +100,7 @@ TYPESAFE_API_KEY=...
 >
 > `ffmpeg` is required for audio processing by `libtorchcodec`, which is used by the audio processors. Please install an `ffmpeg` version compatible with `torchaudio==2.10.0`. Versions 4, 5, 6, 7, and 8 are supported.
 > Make sure `ffmpeg` is correctly installed and available in your `PATH` so that Torch can load it properly.
+> MacOS users: if you installed `ffmpeg` through `homebrew` with a versioned formula, please, add the versioned path to your `zshrc` file, e.g., `export DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/opt/ffmpeg@8/lib`.
 
 # 🚀 Pipeline example
 
@@ -138,11 +139,11 @@ The same design applies to **images**, **audio**, and **video**.
 
 ## Span detection and classification
 
-`SpanPipeline` extends text label tuning to span tasks such as NER or aspect-based sentiment analysis. Rather than BIO tagging, which would add `B-`/`I-` noise to the label embeddings, every contiguous span of up to `max_span_width` tokens is a candidate. Each candidate is embedded from its text and classified against the label embeddings, plus a trainable "none" class for candidates that are not spans of interest. See the [span example](src/delt/examples/pipelines/span.py).
+`SpanPipeline` extends text label tuning to span tasks such as NER or aspect-based sentiment analysis. Rather than BIO tagging, which would add `B-`/`I-` noise to the label embeddings, every contiguous span of up to `max_span_width` words is a candidate. Each text is encoded once, and each candidate is embedded as the mean of its contextual token embeddings and classified against the label embeddings, plus a trainable "none" class for candidates that are not spans of interest. Predicted spans never overlap. See the [span example](examples/pipelines/span.py).
 
 ```python
 from delt import SpanPipeline
-from delt.types import SpanAnnotation
+from delt.pipelines.text import SpanAnnotation
 
 pipeline = SpanPipeline(
     "sentence-transformers/all-MiniLM-L6-v2",
@@ -152,7 +153,7 @@ pipeline = SpanPipeline(
 )
 # `truths` has one list of `SpanAnnotation(start, end, label)` per text (character offsets, `end` exclusive)
 pipeline.fit(texts, truths)
-spans = pipeline.predict(texts, threshold=0.5, overlap="flat")  # list[list[Span]]
+spans = pipeline.predict(texts, threshold=0.5)  # list[list[PredictedSpan]]
 ```
 
 # ⚡ Label tuning example

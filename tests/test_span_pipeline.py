@@ -1,12 +1,13 @@
 """Tests for `delt.SpanPipeline`."""
 
 import random
+from itertools import pairwise
 
 import pytest
 import torch
 
 from delt import SpanPipeline
-from delt.types import SpanAnnotation
+from delt.pipelines.text import SpanAnnotation
 
 
 @pytest.fixture(autouse=True)
@@ -95,6 +96,35 @@ class TestSpanPipeline:
         preds = self.pipeline.predict(texts)
         assert self._f1(preds, truths) >= zs_f1
         assert all(len(s.probs) == 3 for spans in preds for s in spans)
+
+    def test_negative_sampling(self, span_dataset):
+        """Training with sampled negatives still predicts the label probs."""
+        texts, truths = span_dataset
+        pipeline = SpanPipeline(
+            "sentence-transformers/all-MiniLM-L6-v2",
+            "sentence-transformer",
+            {"person": "a person name", "location": "a place name"},
+            "This text is {}",
+            max_span_width=3,
+            negative_ratio=2.0,
+        )
+        pipeline.fit(texts, truths, training_args={"epochs": 10})
+        preds = pipeline.predict(texts, threshold=0.0)
+        assert all(len(s.probs) == 3 for spans in preds for s in spans)
+
+    def test_predicted_spans_do_not_overlap(self, span_dataset):
+        """Predicted spans of each text never overlap."""
+        texts, _ = span_dataset
+        for spans in self.pipeline.predict(texts, threshold=0.0):
+            for previous, current in pairwise(spans):
+                assert previous.end <= current.start
+
+    def test_empty_text(self):
+        """Texts without candidates get no spans."""
+        assert self.pipeline.predict([""]) == [[]]
+        preds = self.pipeline.predict(["", "Alice left."], threshold=0.0)
+        assert preds[0] == []
+        assert preds[1]
 
     def test_misaligned_span_raises(self):
         """Gold spans must align with token boundaries."""

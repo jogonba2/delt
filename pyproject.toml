@@ -67,3 +67,6 @@ dev = [
 [tool.mypy]
 ignore_missing_imports = true
 disable_error_code = "import-untyped"
+
+[tool.ruff.lint]
+extend-safe-fixes = ["RUF022"]

@@ -1,7 +1,9 @@
 """Module for span utils."""
 
 import re
-from typing import Literal
+
+import torch
+from torch.nn import functional as F
 
 _TOKEN_PATTERN = re.compile(r"\w+(?:['’-]\w+)*|[^\w\s]")
 
@@ -42,36 +44,61 @@ def enumerate_candidates(
     ]
 
 
+def mean_pool_spans(
+    token_embeddings: torch.Tensor,
+    token_offsets: list[tuple[int, int]],
+    spans: list[tuple[int, int]],
+) -> torch.Tensor:
+    """
+    Embed spans as the L2-normalized mean of the contextual embeddings of their tokens.
+
+    Args:
+        token_embeddings (torch.Tensor): contextual token embeddings of a text with shape (T, d).
+        token_offsets (list[tuple[int, int]]): (start, end) character offsets of each token, with `end` exclusive.
+        spans (list[tuple[int, int]]): (start, end) character offsets of each span, with `end` exclusive. Every span must overlap at least one token.
+
+    Returns:
+        torch.Tensor: span embeddings with shape (len(spans), d).
+
+    """
+    if not spans:
+        return token_embeddings.new_zeros((0, token_embeddings.shape[-1]))
+    pooled = torch.stack(
+        [
+            token_embeddings[
+                [
+                    k
+                    for k, (token_start, token_end) in enumerate(token_offsets)
+                    if token_start < end and start < token_end
+                ]
+            ].mean(0)
+            for start, end in spans
+        ]
+    )
+    return F.normalize(pooled, p=2, dim=1)
+
+
 def select_spans(
     candidates: list[tuple[int, int]],
     scores: list[float],
     threshold: float = 0.5,
-    overlap: Literal["flat", "nested"] = "flat",
 ) -> list[int]:
     """
-    Select the candidate spans to keep, given their scores.
+    Greedily select the highest-scoring candidate spans above the threshold that do not overlap.
 
     Args:
         candidates (list[tuple[int, int]]): (start, end) character offsets of each candidate.
         scores (list[float]): score of each candidate.
         threshold (float): minimum score to keep a candidate.
-        overlap (Literal["flat", "nested"]): "flat" greedily keeps the highest-scoring spans that do not overlap; "nested" keeps every span above the threshold.
 
     Returns:
         list[int]: indices of the selected candidates, sorted by position in the text.
 
     """
-    if overlap not in ("flat", "nested"):
-        msg = f"`overlap` must be 'flat' or 'nested', got {overlap!r}."
-        raise ValueError(msg)
-
     order = sorted(
         (i for i, score in enumerate(scores) if score >= threshold),
         key=lambda i: (-scores[i], candidates[i][0], -candidates[i][1]),
     )
-    if overlap == "nested":
-        return sorted(order, key=lambda i: candidates[i])
-
     selected: list[int] = []
     for i in order:
         start, end = candidates[i]

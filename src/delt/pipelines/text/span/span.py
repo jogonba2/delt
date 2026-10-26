@@ -1,13 +1,16 @@
 """Module for span pipelines."""
 
 import random
-from typing import Literal
 
 import torch
 
 from delt.pipelines.base import EmbeddingPipeline
 from delt.pipelines.text.span.types import PredictedSpan, SpanAnnotation
-from delt.pipelines.text.span.utils import enumerate_candidates, select_spans
+from delt.pipelines.text.span.utils import (
+    enumerate_candidates,
+    mean_pool_spans,
+    select_spans,
+)
 from delt.pipelines.text.text import TextPipeline
 from delt.types import TrainingOutput
 
@@ -16,8 +19,9 @@ class SpanPipeline(TextPipeline):
     """
     Pipeline for span detection and classification with label tuning.
 
-    Instead of tagging tokens (e.g., BIO), every contiguous span of up to `max_span_width` tokens
-    is a candidate that is embedded from its text and classified against the label embeddings.
+    Instead of tagging tokens (e.g., BIO), every contiguous span of up to `max_span_width` words
+    is a candidate that is classified against the label embeddings. Each text is encoded once and
+    each candidate is embedded as the mean of its contextual token embeddings.
     An extra, trainable "none" class represents candidates that are not spans of interest.
     Labels are plain concepts, so label verbalizations are not polluted with tagging prefixes.
     """
@@ -30,7 +34,7 @@ class SpanPipeline(TextPipeline):
         prompt_template: str,
         none_verbalization: str = "not a relevant phrase",
         max_span_width: int = 8,
-        negative_ratio: float = 5.0,
+        negative_ratio: float | None = None,
         seed: int = 13,
     ) -> None:
         """
@@ -42,8 +46,8 @@ class SpanPipeline(TextPipeline):
             label_verbalizations (dict[str, str]): verbalizations of the labels, e.g. {"person": "a person name"}. Do not include the "none" class.
             prompt_template (str): template to format label verbalizations, e.g., "This text is {}".
             none_verbalization (str): verbalization of the "none" class, which is appended after the labels.
-            max_span_width (int): maximum number of tokens in a candidate span.
-            negative_ratio (float): number of "none" candidates sampled per gold span when training.
+            max_span_width (int): maximum number of words in a candidate span.
+            negative_ratio (float | None): number of "none" candidates sampled per gold span when training. If `None`, all the candidates that are not gold spans are used.
             seed (int): seed to sample negative candidates.
 
         """
@@ -70,14 +74,10 @@ class SpanPipeline(TextPipeline):
             raise ValueError(msg)
         return label
 
-    def _embed_spans(
-        self, strings: list[str], batch_size: int
-    ) -> torch.Tensor:
-        """Embed span strings, encoding identical strings only once."""
-        unique = list(dict.fromkeys(strings))
-        embeddings = self.get_input_embeddings(unique, batch_size)
-        position = {string: i for i, string in enumerate(unique)}
-        return embeddings[[position[string] for string in strings]]
+    @staticmethod
+    def _encoded_length(token_offsets: list[tuple[int, int]]) -> int:
+        """Get the number of characters covered by the encoder, which truncates long texts."""
+        return token_offsets[-1][1] if token_offsets else 0
 
     def fit(
         self,
@@ -90,11 +90,11 @@ class SpanPipeline(TextPipeline):
         """
         Train the label embeddings and logit scale using label tuning on candidate spans.
 
-        Gold spans are positives and a random subset of the remaining candidates are "none" negatives.
+        Gold spans are positives and the remaining candidates (all of them, or a random subset given by `negative_ratio`) are "none" negatives.
 
         Args:
             data (list[str]): input texts.
-            truths (list[list[SpanAnnotation]]): gold spans of each text. Offsets must align with token boundaries.
+            truths (list[list[SpanAnnotation]]): gold spans of each text. Offsets must align with word boundaries.
             training_args (Optional[dict]): training args for label tuning in `delt.train.label_tuning`.
             embeddings_batch_size (int): batch size to get embeddings from the encoder model.
             do_cv (bool): not supported yet, since folds would be split by span instead of by text.
@@ -110,39 +110,68 @@ class SpanPipeline(TextPipeline):
             msg = "`data` and `truths` must have the same length."
             raise ValueError(msg)
 
-        strings: list[str] = []
-        labels: list[int] = []
-        negatives: list[str] = []
-        for text, annotations in zip(data, truths, strict=True):
-            candidates = set(enumerate_candidates(text, self.max_span_width))
-            all_candidates = set(
-                enumerate_candidates(text, self.max_span_width)
-            )
+        encoded = self.encoder.get_token_embeddings(
+            data, embeddings_batch_size
+        )
+
+        # (text index, offsets, label) of each training span
+        positives: list[tuple[int, tuple[int, int], int]] = []
+        negatives: list[tuple[int, tuple[int, int], int]] = []
+        for index, (text, annotations, (_, token_offsets)) in enumerate(
+            zip(data, truths, encoded, strict=True)
+        ):
+            candidates = enumerate_candidates(text, self.max_span_width)
+            candidate_set = set(candidates)
+            length = self._encoded_length(token_offsets)
             gold = set()
             for annotation in annotations:
                 offsets = (annotation.start, annotation.end)
-                if offsets not in all_candidates:
+                if offsets not in candidate_set:
                     msg = (
                         f"Span {text[annotation.start : annotation.end]!r} {offsets} in {text!r} "
-                        f"does not align with token boundaries or is wider than {self.max_span_width} tokens."
+                        f"does not align with word boundaries or is wider than {self.max_span_width} words."
+                    )
+                    raise ValueError(msg)
+                if annotation.end > length:
+                    msg = (
+                        f"Span {text[annotation.start : annotation.end]!r} {offsets} in {text!r} "
+                        "is beyond the encoder's max length."
                     )
                     raise ValueError(msg)
                 gold.add(offsets)
-                strings.append(text[annotation.start : annotation.end])
-                labels.append(self._label_index(annotation.label))
+                positives.append(
+                    (index, offsets, self._label_index(annotation.label))
+                )
             negatives.extend(
-                text[start:end] for start, end in sorted(candidates - gold)
+                (index, offsets, self.none_index)
+                for offsets in candidates
+                if offsets not in gold and offsets[1] <= length
             )
 
-        num_negatives = min(
-            len(negatives), round(self.negative_ratio * max(len(strings), 1))
-        )
-        strings.extend(
-            random.Random(self.seed).sample(negatives, num_negatives)
-        )
-        labels.extend([self.none_index] * num_negatives)
+        if self.negative_ratio is not None:
+            num_negatives = min(
+                len(negatives),
+                round(self.negative_ratio * max(len(positives), 1)),
+            )
+            negatives = random.Random(self.seed).sample(
+                negatives, num_negatives
+            )
 
-        embeddings = self._embed_spans(strings, embeddings_batch_size)
+        # Group spans by text to pool each text's token embeddings at once
+        samples = sorted(positives + negatives, key=lambda sample: sample[0])
+        spans_per_text: list[list[tuple[int, int]]] = [[] for _ in data]
+        for index, offsets, _ in samples:
+            spans_per_text[index].append(offsets)
+        labels = [label for _, _, label in samples]
+
+        embeddings = torch.cat(
+            [
+                mean_pool_spans(token_embeddings, token_offsets, spans)
+                for (token_embeddings, token_offsets), spans in zip(
+                    encoded, spans_per_text, strict=True
+                )
+            ]
+        )
         return EmbeddingPipeline.fit(self, embeddings, labels, training_args)
 
     def predict(
@@ -151,39 +180,49 @@ class SpanPipeline(TextPipeline):
         batch_size: int = 16,
         embeddings_batch_size: int = 16,
         threshold: float = 0.5,
-        overlap: Literal["flat", "nested"] = "flat",
     ) -> list[list[PredictedSpan]]:
         """
-        Detect and classify spans in each text.
+        Detect and classify non-overlapping spans in each text.
 
         A candidate is scored as `1 - p(none)` and gets the highest-probability non-none label.
+        Candidates above the threshold are kept from the highest score down, skipping those that overlap a kept one.
+        Candidates beyond the encoder's max length are not considered.
 
         Args:
             data (list[str]): input texts.
             batch_size (int): the batch size for inference.
             embeddings_batch_size (int): batch size to get embeddings from the encoder model.
             threshold (float): minimum score to keep a span.
-            overlap (Literal["flat", "nested"]): "flat" keeps non-overlapping spans only (highest score first); "nested" keeps all spans above the threshold.
 
         Returns:
-            list[list[PredictedSpan]]: spans of each text. `Span.probs` has the probability of each label followed by the "none" class.
+            list[list[PredictedSpan]]: spans of each text. `PredictedSpan.probs` has the probability of each label followed by the "none" class.
 
         """
+        encoded = self.encoder.get_token_embeddings(
+            data, embeddings_batch_size
+        )
         all_candidates = [
-            enumerate_candidates(text, self.max_span_width) for text in data
+            [
+                offsets
+                for offsets in enumerate_candidates(text, self.max_span_width)
+                if offsets[1] <= self._encoded_length(token_offsets)
+            ]
+            for text, (_, token_offsets) in zip(data, encoded, strict=True)
         ]
-        strings = [
-            text[start:end]
-            for text, candidates in zip(data, all_candidates, strict=True)
-            for start, end in candidates
-        ]
-        if not strings:
+        if not any(all_candidates):
             return [[] for _ in data]
 
-        embeddings = self._embed_spans(strings, embeddings_batch_size)
+        embeddings = torch.cat(
+            [
+                mean_pool_spans(token_embeddings, token_offsets, candidates)
+                for (token_embeddings, token_offsets), candidates in zip(
+                    encoded, all_candidates, strict=True
+                )
+            ]
+        )
         predictions = EmbeddingPipeline.predict(self, embeddings, batch_size)
 
-        results: list[list[Span]] = []
+        results: list[list[PredictedSpan]] = []
         offset = 0
         for text, candidates in zip(data, all_candidates, strict=True):
             probs = [
@@ -192,7 +231,7 @@ class SpanPipeline(TextPipeline):
             ]
             offset += len(candidates)
             scores = [1.0 - p[self.none_index] for p in probs]
-            keep = select_spans(candidates, scores, threshold, overlap)
+            keep = select_spans(candidates, scores, threshold)
             results.append(
                 [
                     PredictedSpan(

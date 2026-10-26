@@ -25,29 +25,26 @@ from delt.teachers import (
     LMMVideoTeacher,
 )
 
-ENCODERS = [
+__all__ = [
+    # Pipelines
+    "AudioPipeline",
+    # Encoders
     "ClapEncoder",
     "ClipEncoder",
-    "SentenceTransformerEncoder",
-    "SiglipEncoder",
-    "XclipEncoder",
-    "get_encoder",
-]
-PIPELINES = [
-    "AudioPipeline",
     "EmbeddingPipeline",
     "EncoderPipeline",
     "ImagePipeline",
-    "SpanPipeline",
-    "TextPipeline",
-    "VideoPipeline",
-]
-TEACHERS = [
+    # Teachers
     "JevTextTeacher",
     "LLMTextTeacher",
     "LMMAudioTeacher",
     "LMMImageTeacher",
     "LMMVideoTeacher",
+    "SentenceTransformerEncoder",
+    "SiglipEncoder",
+    "SpanPipeline",
+    "TextPipeline",
+    "VideoPipeline",
+    "XclipEncoder",
+    "get_encoder",
 ]
-
-__all__ = ENCODERS + PIPELINES + TEACHERS

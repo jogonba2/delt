@@ -1,3 +1,5 @@
+"""Module for span types."""
+
 from dataclasses import dataclass
 
 

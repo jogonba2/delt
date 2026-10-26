@@ -1,3 +1,5 @@
+"""Package for span pipelines."""
+
 from delt.pipelines.text.span.span import SpanPipeline
 from delt.pipelines.text.span.types import PredictedSpan, SpanAnnotation
 

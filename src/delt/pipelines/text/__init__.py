@@ -1,3 +1,5 @@
+"""Package for text pipelines."""
+
 from delt.pipelines.text.span import (
     PredictedSpan,
     SpanAnnotation,

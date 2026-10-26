@@ -1,3 +1,5 @@
+"""Module for Jev teacher utils."""
+
 from concurrent.futures import ThreadPoolExecutor
 
 from tqdm import tqdm
