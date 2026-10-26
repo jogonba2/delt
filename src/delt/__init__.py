@@ -1,6 +1,6 @@
 """Main package of delt."""
 
-from .encoders import (
+from delt.encoders import (
     ClapEncoder,
     ClipEncoder,
     SentenceTransformerEncoder,
@@ -8,7 +8,7 @@ from .encoders import (
     XclipEncoder,
     get_encoder,
 )
-from .pipelines import (
+from delt.pipelines import (
     AudioPipeline,
     EmbeddingPipeline,
     EncoderPipeline,
@@ -17,21 +17,37 @@ from .pipelines import (
     TextPipeline,
     VideoPipeline,
 )
-from .teachers import LLMTextTeacher
+from delt.teachers import (
+    JevTextTeacher,
+    LLMTextTeacher,
+    LMMAudioTeacher,
+    LMMImageTeacher,
+    LMMVideoTeacher,
+)
 
-__all__ = [
-    "AudioPipeline",
+ENCODERS = [
     "ClapEncoder",
     "ClipEncoder",
-    "EmbeddingPipeline",
-    "EncoderPipeline",
-    "ImagePipeline",
-    "LLMTextTeacher",
     "SentenceTransformerEncoder",
     "SiglipEncoder",
-    "SpanPipeline",
-    "TextPipeline",
-    "VideoPipeline",
     "XclipEncoder",
     "get_encoder",
 ]
+PIPELINES = [
+    "AudioPipeline",
+    "EmbeddingPipeline",
+    "EncoderPipeline",
+    "ImagePipeline",
+    "SpanPipeline",
+    "TextPipeline",
+    "VideoPipeline",
+]
+TEACHERS = [
+    "JevTextTeacher",
+    "LLMTextTeacher",
+    "LMMAudioTeacher",
+    "LMMImageTeacher",
+    "LMMVideoTeacher",
+]
+
+__all__ = ENCODERS + PIPELINES + TEACHERS

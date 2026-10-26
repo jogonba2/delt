@@ -18,27 +18,6 @@ class Prediction:
 
 
 @dataclass
-class SpanAnnotation:
-    """A gold span annotation, with character offsets (`end` is exclusive)."""
-
-    start: int
-    end: int
-    label: int | str
-
-
-@dataclass
-class Span:
-    """A predicted span, with character offsets (`end` is exclusive)."""
-
-    start: int
-    end: int
-    text: str
-    label: int
-    score: float
-    probs: list[float]
-
-
-@dataclass
 class TrainingOutput:
     """Output from label tuning."""
 

@@ -1,7 +1,7 @@
 """Example of span detection and classification with label tuning."""
 
 from delt import SpanPipeline
-from delt.types import SpanAnnotation
+from delt.pipelines.text import SpanAnnotation
 
 # Set your data and configure the encoder.
 # Labels are plain concepts.
@@ -66,12 +66,12 @@ training_output = pipeline.fit(texts, truths)
 
 # Prediction after training
 texts = [
-    "Apple sells a lot of iphones",
+    "A lot of iphones are sold by Apple each year.",
     "TowerZen was developed by Unbabel.",
-    "This package has been written by Jose from the AI&RD team.",
+    "This package has been written by Jose from the TransPerfect AI&RD team.",
 ]
 
-preds = pipeline.predict(texts, batch_size=8, threshold=0.8, overlap="flat")
+preds = pipeline.predict(texts, batch_size=8, threshold=0.8)
 for text, spans in zip(texts, preds, strict=True):
     print(
         text,

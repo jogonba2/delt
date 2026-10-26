@@ -5,10 +5,11 @@ from typing import Literal
 
 import torch
 
-from delt.common.spans import enumerate_candidates, select_spans
 from delt.pipelines.base import EmbeddingPipeline
-from delt.pipelines.text import TextPipeline
-from delt.types import Span, SpanAnnotation, TrainingOutput
+from delt.pipelines.text.span.types import PredictedSpan, SpanAnnotation
+from delt.pipelines.text.span.utils import enumerate_candidates, select_spans
+from delt.pipelines.text.text import TextPipeline
+from delt.types import TrainingOutput
 
 
 class SpanPipeline(TextPipeline):
@@ -115,9 +116,7 @@ class SpanPipeline(TextPipeline):
         for text, annotations in zip(data, truths, strict=True):
             candidates = set(enumerate_candidates(text, self.max_span_width))
             all_candidates = set(
-                enumerate_candidates(
-                    text, self.max_span_width, filter_edges=False
-                )
+                enumerate_candidates(text, self.max_span_width)
             )
             gold = set()
             for annotation in annotations:
@@ -153,7 +152,7 @@ class SpanPipeline(TextPipeline):
         embeddings_batch_size: int = 16,
         threshold: float = 0.5,
         overlap: Literal["flat", "nested"] = "flat",
-    ) -> list[list[Span]]:
+    ) -> list[list[PredictedSpan]]:
         """
         Detect and classify spans in each text.
 
@@ -167,7 +166,7 @@ class SpanPipeline(TextPipeline):
             overlap (Literal["flat", "nested"]): "flat" keeps non-overlapping spans only (highest score first); "nested" keeps all spans above the threshold.
 
         Returns:
-            list[list[Span]]: spans of each text. `Span.probs` has the probability of each label followed by the "none" class.
+            list[list[PredictedSpan]]: spans of each text. `Span.probs` has the probability of each label followed by the "none" class.
 
         """
         all_candidates = [
@@ -196,7 +195,7 @@ class SpanPipeline(TextPipeline):
             keep = select_spans(candidates, scores, threshold, overlap)
             results.append(
                 [
-                    Span(
+                    PredictedSpan(
                         start=candidates[i][0],
                         end=candidates[i][1],
                         text=text[candidates[i][0] : candidates[i][1]],

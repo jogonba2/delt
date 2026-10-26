@@ -1,5 +1,7 @@
 """Package for text encoders."""
 
-from .sentence_transformer import SentenceTransformerEncoder
+from delt.encoders.text.sentence_transformer.sentence_transformer import (
+    SentenceTransformerEncoder,
+)
 
 __all__ = ["SentenceTransformerEncoder"]

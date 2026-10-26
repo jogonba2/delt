@@ -20,22 +20,8 @@ def tokenize_with_offsets(text: str) -> list[tuple[int, int]]:
     return [match.span() for match in _TOKEN_PATTERN.finditer(text)]
 
 
-_STOPWORDS = frozenset(
-    "a an the this that these those and or but nor of in on at to from by with for as into onto "
-    "over under about is are was were be been being am has have had do does did will would can could "
-    "should may might must shall it its it's he she they we you i me him her them us my your his their "
-    "our not no than then so if while when where which who whom whose what lot lots some any each every "
-    "such very too also just only".split()
-)
-
-
-def _is_valid_edge(token: str) -> bool:
-    """Whether a token can start or end a span: it must be a word and not a stopword."""
-    return any(c.isalnum() for c in token) and token.lower() not in _STOPWORDS
-
-
 def enumerate_candidates(
-    text: str, max_span_width: int = 8, filter_edges: bool = True
+    text: str, max_span_width: int = 8
 ) -> list[tuple[int, int]]:
     """
     Enumerate every contiguous span of up to `max_span_width` tokens.
@@ -43,19 +29,16 @@ def enumerate_candidates(
     Args:
         text (str): the text to enumerate spans from.
         max_span_width (int): maximum number of tokens in a span.
-        filter_edges (bool): drop spans that start or end with punctuation or a stopword, since they are hardly ever spans of interest.
 
     Returns:
         list[tuple[int, int]]: (start, end) character offsets of each candidate span, with `end` exclusive.
 
     """
     tokens = tokenize_with_offsets(text)
-    valid = [_is_valid_edge(text[start:end]) for start, end in tokens]
     return [
         (tokens[i][0], tokens[j][1])
         for i in range(len(tokens))
         for j in range(i, min(i + max_span_width, len(tokens)))
-        if not filter_edges or (valid[i] and valid[j])
     ]
 
 

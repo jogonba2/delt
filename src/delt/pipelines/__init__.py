@@ -1,11 +1,10 @@
 """Package for pipelines."""
 
-from .audio import AudioPipeline
-from .base import EmbeddingPipeline, EncoderPipeline
-from .image import ImagePipeline
-from .span import SpanPipeline
-from .text import TextPipeline
-from .video import VideoPipeline
+from delt.pipelines.audio import AudioPipeline
+from delt.pipelines.base import EmbeddingPipeline, EncoderPipeline
+from delt.pipelines.image import ImagePipeline
+from delt.pipelines.text import SpanPipeline, TextPipeline
+from delt.pipelines.video import VideoPipeline
 
 __all__ = [
     "AudioPipeline",

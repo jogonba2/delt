@@ -1,5 +1,5 @@
-"""Package for text teachers."""
+"""Package for image teachers."""
 
-from .lmm import LMMImageTeacher
+from delt.teachers.image.lmm import LMMImageTeacher
 
 __all__ = ["LMMImageTeacher"]
