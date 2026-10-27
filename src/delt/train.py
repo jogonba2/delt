@@ -10,8 +10,8 @@ from torch.nn import functional as F
 from tqdm import tqdm
 
 from delt.common import dict_cartesian_product, unimodal_kfold
-from delt.predict import DEFAULT_LOGIT_SCALE, predict
-from delt.types import TrainingOutput
+from delt.predict import predict
+from delt.types import DEFAULT_LOGIT_SCALE, MAX_LOGIT_SCALE, TrainingOutput
 
 GRID_SEARCH_PARAMS = {
     "learning_rate": [1e-2, 1e-1],
@@ -78,7 +78,12 @@ def label_tuning(
 
     # Move everything to the same device
     truths = truths.to(input_embeddings.device)
-    label_embeddings = label_embeddings.to(input_embeddings.device)
+
+    # Normalize the initial label embeddings, as the tuned ones are,
+    # so the drift loss only measures how much they moved
+    label_embeddings = F.normalize(
+        label_embeddings.to(input_embeddings.device), p=2, dim=1
+    )
 
     # Prepare parameters to train
     trainable_label_embeddings = nn.Parameter(
@@ -131,13 +136,19 @@ def label_tuning(
         optimizer.step()
         optimizer.zero_grad()
 
+        with torch.no_grad():
+            logit_scale.clamp_(0, MAX_LOGIT_SCALE)
+
         pbar.set_postfix(
             loss=f"{total_loss.item():.4f}",
             cls=f"{classification_loss.item():.4f}",
             drift=f"{drift_loss.item():.4f}",
         )
     end_time = time()
-    label_embeddings = norm_label_embeddings.detach()
+
+    label_embeddings = F.normalize(
+        trainable_label_embeddings.detach(), p=2, dim=1
+    )
     logit_scale = logit_scale.detach()
 
     return TrainingOutput(

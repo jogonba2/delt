@@ -12,9 +12,16 @@ from safetensors.torch import load_file, save_file
 from delt.common import format_prompt, labels_to_indices
 from delt.encoders import get_encoder
 from delt.evaluate import evaluate as compute_metrics
-from delt.predict import DEFAULT_LOGIT_SCALE, predict
+from delt.predict import predict
 from delt.train import label_tuning, label_tuning_cv
-from delt.types import Audio, Image, Prediction, TrainingOutput, Video
+from delt.types import (
+    DEFAULT_LOGIT_SCALE,
+    Audio,
+    Image,
+    Prediction,
+    TrainingOutput,
+    Video,
+)
 
 INFO_FILENAME = "model.json"
 EMBEDDINGS_FILENAME = "label_embeddings.safetensors"

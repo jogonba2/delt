@@ -1,15 +1,10 @@
 """Module for inference with dual encoder models."""
 
-import math
-
 import numpy as np
 import torch
 
 from delt.common import batchify_tensor
-from delt.types import Prediction
-
-# Initial logit scale, in log space as in CLIP: logits are multiplied by `exp(DEFAULT_LOGIT_SCALE) = 1 / 0.07`
-DEFAULT_LOGIT_SCALE = math.log(1 / 0.07)
+from delt.types import DEFAULT_LOGIT_SCALE, Prediction
 
 
 def predict_proba(
@@ -24,7 +19,8 @@ def predict_proba(
     Args:
         input_embeddings (torch.Tensor): the input embeddings with shape (N, d).
         label_embeddings (torch.Tensor): the label embeddings with shape (L, d).
-        logit_scale (torch.Tensor | None): the logit scale in log space with shape (1,), i.e., the logits are multiplied by `logit_scale.exp()`. If `None`, `DEFAULT_LOGIT_SCALE` is used.
+        logit_scale (torch.Tensor | None): the logit scale in log space with shape (1,), i.e., the logits are multiplied by `logit_scale.exp()`.
+                                           If `None`, `DEFAULT_LOGIT_SCALE` is used.
         batch_size (int): the batch size.
 
     Returns:
