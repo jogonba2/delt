@@ -45,6 +45,7 @@ def predict(
     label_embeddings: torch.Tensor,
     logit_scale: torch.Tensor,
     batch_size: int = 16,
+    label_names: list[str] | None = None,
 ) -> list[Prediction]:
     """
     Compute the max prob label and probs per label for each input.
@@ -54,9 +55,10 @@ def predict(
         label_embeddings (torch.Tensor): the label embeddings with shape (L, d).
         logit_scale (torch.Tensor): the logit scale with shape (1,).
         batch_size (int): the batch size.
+        label_names (list[str] | None): the names of the labels, in the same order as `label_embeddings`. If `None`, labels are returned as indices.
 
     Returns:
-        list[Prediction]: list with predictions for each sample, containing the label with max prob and probs per label.
+        list[Prediction]: list with predictions for each sample, containing the label with max prob (name or index) and probs per label.
 
     """
     probas = predict_proba(
@@ -64,6 +66,11 @@ def predict(
     )
     preds = probas.argmax(-1)
     return [
-        Prediction(probs=probs, label=label.item())
+        Prediction(
+            probs=probs,
+            label=label_names[label.item()]
+            if label_names is not None
+            else label.item(),
+        )
         for probs, label in zip(probas, preds)
     ]

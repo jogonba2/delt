@@ -26,3 +26,4 @@ training_output = pipeline.fit(input_embeddings, truths, do_cv=True)
 
 # Prediction after training
 preds = pipeline.predict(input_embeddings, batch_size=8)
+print(preds)

@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 
 import torch
 
-from delt.common import format_prompt
+from delt.common import format_prompt, labels_to_indices
 from delt.encoders import get_encoder
 from delt.predict import predict
 from delt.train import label_tuning, label_tuning_cv
@@ -27,6 +27,7 @@ class EmbeddingPipeline(ABC):
         self,
         label_embeddings: torch.Tensor | list,
         logit_scale: torch.Tensor | None = None,
+        label_names: list[str] | None = None,
     ) -> None:
         """
         Initialize an embedding-based pipeline.
@@ -34,9 +35,11 @@ class EmbeddingPipeline(ABC):
         Args:
             label_embeddings (torch.Tensor | list): the label embeddings with shape (N, d).
             logit_scale (torch.Tensor | None): the scale factor for the logits with shape (1,).
+            label_names (list[str] | None): the names of the labels, in the same order as `label_embeddings`. If given, label names can be used in `truths` and are returned as the predicted labels.
 
         """
         self.label_embeddings = label_embeddings
+        self.label_names = label_names
         self.logit_scale = (
             logit_scale if logit_scale is not None else torch.tensor([1.0])
         )
@@ -56,7 +59,7 @@ class EmbeddingPipeline(ABC):
 
         Args:
             input_embeddings (torch.Tensor | list): the embedded data with shape (N, d).
-            truths (torch.Tensor | list): reference labels as integers with shape (N,) or expected probabilities with shape (N, classes).
+            truths (torch.Tensor | list): reference labels as integers (or label names, if `label_names` is set) with shape (N,) or expected probabilities with shape (N, classes).
             training_args (Optional[dict]): training args for label tuning in `delt.train.label_tuning`, e.g., `learning_rate`, `dropout`, and `drift_coefficient`.
             do_cv (bool): whether to do k-fold cross validation in training or not when training with label tuning.
 
@@ -66,6 +69,8 @@ class EmbeddingPipeline(ABC):
         """
         if training_args is None:
             training_args = {}
+
+        truths = labels_to_indices(truths, self.label_names)
 
         if do_cv:
             output = label_tuning_cv(
@@ -98,7 +103,7 @@ class EmbeddingPipeline(ABC):
             batch_size (int): the batch size for inference.
 
         Returns:
-            list[Prediction]: list with predictions for each sample, containing the label with max prob and probs per label.
+            list[Prediction]: list with predictions for each sample, containing the label with max prob (name if `label_names` is set, index otherwise) and probs per label.
 
         """
         return predict(
@@ -106,6 +111,7 @@ class EmbeddingPipeline(ABC):
             self.label_embeddings,
             self.logit_scale,
             batch_size,
+            self.label_names,
         )
 
     @classmethod
@@ -134,7 +140,7 @@ class EmbeddingPipeline(ABC):
         encoder = get_encoder(encoder_class, encoder_name)
         prompts = format_prompt(label_verbalizations, prompt_template)
         label_embeddings = encoder.get_text_embeddings(prompts)
-        return cls(label_embeddings)
+        return cls(label_embeddings, label_names=list(label_verbalizations))
 
 
 class EncoderPipeline(EmbeddingPipeline):
@@ -167,7 +173,10 @@ class EncoderPipeline(EmbeddingPipeline):
 
         self.encoder = encoder
 
-        super().__init__(label_embeddings=encoder.get_text_embeddings(prompts))
+        super().__init__(
+            label_embeddings=encoder.get_text_embeddings(prompts),
+            label_names=list(label_verbalizations),
+        )
 
     @abstractmethod
     def get_input_embeddings(
@@ -191,7 +200,7 @@ class EncoderPipeline(EmbeddingPipeline):
     def fit(
         self,
         data: list[str] | list[Image] | list[Audio] | list[Video],
-        truths: list[int],
+        truths: list[int] | list[str],
         training_args: dict | None = None,
         embeddings_batch_size: int = 16,
         do_cv: bool = False,
@@ -204,7 +213,7 @@ class EncoderPipeline(EmbeddingPipeline):
 
         Args:
             data (list[str] | list[Image.Image] | list[bytes]): input data.
-            truths (list[int]): reference labels as integers.
+            truths (list[int] | list[str]): reference labels as label names or integers (positions of the labels in `label_verbalizations`).
             training_args (Optional[dict]): training args for label tuning in `delt.train.label_tuning`, e.g., `learning_rate`, `dropout`, and `drift_coefficient`.
             embeddings_batch_size (int): batch size to get embeddings from the encoder models.
             do_cv (bool): whether to do k-fold cross validation in training or not when training with label tuning.
@@ -231,7 +240,7 @@ class EncoderPipeline(EmbeddingPipeline):
             embeddings_batch_size (int): batch size to get embeddings from the encoder models.
 
         Returns:
-            list[Prediction]: list with predictions for each sample, containing the label with max prob and probs per label.
+            list[Prediction]: list with predictions for each sample, containing the name of the label with max prob and probs per label.
 
         """
         embeddings = self.get_input_embeddings(data, embeddings_batch_size)

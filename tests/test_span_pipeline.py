@@ -76,9 +76,8 @@ class TestSpanPipeline:
             for i, spans in enumerate(preds)
             for s in spans
         }
-        label_ids = {"person": 0, "location": 1}
         gold_set = {
-            (i, a.start, a.end, label_ids[a.label])
+            (i, a.start, a.end, a.label)
             for i, spans in enumerate(truths)
             for a in spans
         }

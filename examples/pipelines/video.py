@@ -30,7 +30,7 @@ label_verbalizations = {
     "fake": "fake",
     "real": "real",
 }
-truths = [0, 1]
+truths = ["fake", "real"]
 prompt_template = "The video shows a {} face."
 encoder_class = "xclip"
 encoder_name = "microsoft/xclip-base-patch16-zero-shot"

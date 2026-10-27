@@ -13,7 +13,7 @@ images = [
     for url in [cat_url, dog_url]
 ]
 label_verbalizations = {"cat": "cat", "dog": "dog"}
-truths = [0, 1]
+truths = ["cat", "dog"]
 prompt_template = "The animal in the image is a {}"
 encoder_class = "siglip"
 encoder_name = "google/siglip2-base-patch16-naflex"

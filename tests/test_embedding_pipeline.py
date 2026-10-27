@@ -126,3 +126,57 @@ def test_label_tuning_continuous_fit(embeddings_data):
     pipeline.fit(embeddings, labels)
     predictions = pipeline.predict(embeddings, batch_size=8)
     assert len(predictions) == len(embeddings)
+
+
+def _named_pipeline(embeddings_data):
+    _, _, label_embeddings = embeddings_data
+    names = [f"class_{i}" for i in range(label_embeddings.shape[0])]
+    return EmbeddingPipeline(label_embeddings, label_names=names), names
+
+
+def test_predict_returns_label_names(embeddings_data):
+    """Check that predicted labels are names when `label_names` is set."""
+    embeddings, _, _ = embeddings_data
+    pipeline, names = _named_pipeline(embeddings_data)
+    preds = pipeline.predict(embeddings, batch_size=8)
+    assert all(isinstance(pred.label, str) for pred in preds)
+    assert all(pred.label == names[int(pred.probs.argmax())] for pred in preds)
+
+
+def test_predict_returns_indices_without_label_names(embeddings_data):
+    """Check that predicted labels are indices when `label_names` is not set."""
+    embeddings, _, label_embeddings = embeddings_data
+    preds = EmbeddingPipeline(label_embeddings).predict(embeddings)
+    assert all(isinstance(pred.label, int) for pred in preds)
+
+
+def test_fit_with_label_names_matches_indices(embeddings_data):
+    """Check that truths as label names are equivalent to truths as indices."""
+    embeddings, labels, _ = embeddings_data
+    _, names = _named_pipeline(embeddings_data)
+    mixed = [names[i] if j % 2 else i for j, i in enumerate(labels.tolist())]
+    outputs = []
+    for truths in (labels.tolist(), [names[i] for i in labels], mixed):
+        pipeline, _ = _named_pipeline(embeddings_data)
+        torch.manual_seed(13)
+        outputs.append(pipeline.fit(embeddings, truths))
+    for output in outputs[1:]:
+        assert torch.equal(
+            output.label_embeddings, outputs[0].label_embeddings
+        )
+
+
+def test_fit_with_unknown_label_name(embeddings_data):
+    """Check that unknown label names in truths raise an error."""
+    embeddings, _, _ = embeddings_data
+    pipeline, _ = _named_pipeline(embeddings_data)
+    with pytest.raises(ValueError, match="Unknown label"):
+        pipeline.fit(embeddings, ["unknown"] * len(embeddings))
+
+
+def test_fit_with_label_names_requires_label_names(embeddings_data):
+    """Check that label names in truths need `label_names` to be set."""
+    embeddings, _, label_embeddings = embeddings_data
+    pipeline = EmbeddingPipeline(label_embeddings)
+    with pytest.raises(ValueError, match="label_names"):
+        pipeline.fit(embeddings, ["class_0"] * len(embeddings))

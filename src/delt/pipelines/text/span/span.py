@@ -12,6 +12,7 @@ from delt.pipelines.text.span.utils import (
     select_spans,
 )
 from delt.pipelines.text.text import TextPipeline
+from delt.predict import predict_proba
 from delt.types import TrainingOutput
 
 
@@ -51,8 +52,7 @@ class SpanPipeline(TextPipeline):
             seed (int): seed to sample negative candidates.
 
         """
-        self.label_names = list(label_verbalizations)
-        self.none_index = len(self.label_names)
+        self.none_index = len(list(label_verbalizations))
         self.max_span_width = max_span_width
         self.negative_ratio = negative_ratio
         self.seed = seed
@@ -62,6 +62,7 @@ class SpanPipeline(TextPipeline):
             {**label_verbalizations, "__none__": none_verbalization},
             prompt_template,
         )
+        self.label_names = list(label_verbalizations)
 
     def _label_index(self, label: int | str) -> int:
         if isinstance(label, str):
@@ -220,14 +221,16 @@ class SpanPipeline(TextPipeline):
                 )
             ]
         )
-        predictions = EmbeddingPipeline.predict(self, embeddings, batch_size)
+        all_probs = predict_proba(
+            embeddings, self.label_embeddings, self.logit_scale, batch_size
+        )
 
         results: list[list[PredictedSpan]] = []
         offset = 0
         for text, candidates in zip(data, all_candidates, strict=True):
             probs = [
-                [float(x) for x in p.probs]
-                for p in predictions[offset : offset + len(candidates)]
+                [float(prob) for prob in probs]
+                for probs in all_probs[offset : offset + len(candidates)]
             ]
             offset += len(candidates)
             scores = [1.0 - p[self.none_index] for p in probs]
@@ -238,9 +241,12 @@ class SpanPipeline(TextPipeline):
                         start=candidates[i][0],
                         end=candidates[i][1],
                         text=text[candidates[i][0] : candidates[i][1]],
-                        label=max(
-                            range(self.none_index), key=lambda k: probs[i][k]
-                        ),
+                        label=self.label_names[
+                            max(
+                                range(self.none_index),
+                                key=lambda k: probs[i][k],
+                            )
+                        ],
                         score=scores[i],
                         probs=probs[i],
                     )

@@ -11,7 +11,7 @@ cat_url = "http://images.cocodataset.org/val2017/000000039769.jpg"
 dog_url = "https://pngfre.com/wp-content/uploads/dog-poster.png"
 images = [
     PIL.Image.open(requests.get(url, stream=True).raw).convert("RGB")
-    for url in [cat_url, dog_url]
+    for url in [dog_url, cat_url]
 ]
 label_set = ["cat", "dog"]
 

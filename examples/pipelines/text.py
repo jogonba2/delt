@@ -8,7 +8,7 @@ label_verbalizations = {
     "positive": "really positive",
     "negative": "really negative",
 }
-truths = [0, 1, 0, 1]
+truths = ["positive", "negative", "positive", "negative"]
 prompt_template = "This text is {}"
 encoder_class = "sentence-transformer"
 encoder_name = "sentence-transformers/all-MiniLM-L6-v2"

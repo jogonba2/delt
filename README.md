@@ -106,6 +106,8 @@ TYPESAFE_API_KEY=...
 
 The API is intentionally minimal. For examples of how to use `delt` for every modality, take a look to the [pipeline examples folder](src/delt/examples/pipelines).
 
+`truths` are given as label names (the keys of `label_verbalizations`), and `predict` returns the label name in `Prediction.label`. Label indices (the position of the label in `label_verbalizations`) are also accepted in `truths`.
+
 ```python
 from delt import TextPipeline
 
@@ -115,7 +117,7 @@ label_verbalizations = {
     "positive": "really positive",
     "negative": "really negative",
 }
-truths = [0, 1, 0, 1]
+truths = ["positive", "negative", "positive", "negative"]
 prompt_template = "This text is {}"
 encoder_class = "sentence-transformer"
 encoder_name = "sentence-transformers/all-MiniLM-L6-v2"

@@ -11,10 +11,7 @@ def show_outputs(texts: list[str], preds: list[list[PredictedSpan]]):
     for text, spans in zip(texts, preds, strict=True):
         print(
             text,
-            [
-                (s.text, pipeline.label_names[s.label], round(s.score, 2))
-                for s in spans
-            ],
+            [(s.text, s.label, round(s.score, 2)) for s in spans],
         )
 
 

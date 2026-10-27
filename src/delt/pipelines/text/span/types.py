@@ -19,6 +19,6 @@ class PredictedSpan:
     start: int
     end: int
     text: str
-    label: int
+    label: str
     score: float
     probs: list[float]

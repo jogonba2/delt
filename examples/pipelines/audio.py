@@ -13,7 +13,7 @@ morse = requests.get(
 ).content
 audios = [bell, morse]
 label_verbalizations = {"bell": "bell", "morse": "morse"}
-truths = [0, 1]
+truths = ["bell", "morse"]
 prompt_template = "That sound is a {}"
 encoder_class = "clap"
 encoder_name = "laion/larger_clap_music_and_speech"
@@ -25,11 +25,9 @@ pipeline = AudioPipeline(
 
 # Zero-shot prediction
 preds = pipeline.predict(audios, batch_size=8)
-print(preds)
 
 # Label-tuning training
 training_output = pipeline.fit(audios, truths)
 
 # Prediction after training
 preds = pipeline.predict(audios, batch_size=8)
-print(preds)

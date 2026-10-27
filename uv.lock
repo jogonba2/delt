@@ -556,7 +556,7 @@ wheels = [
 
 [[package]]
 name = "deltpy"
-version = "1.6.2"
+version = "1.7.2"
 source = { editable = "." }
 dependencies = [
     { name = "accelerate" },

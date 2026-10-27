@@ -2,6 +2,7 @@
 
 import random
 
+import numpy as np
 import PIL
 import pytest
 import requests
@@ -26,7 +27,7 @@ def image_dataset():
         PIL.Image.open(requests.get(url, stream=True).raw).convert("RGB")
         for url in [cat_url, dog_url]
     ]
-    truths = [0, 1]
+    truths = ["cat", "dog"]
     return images, truths
 
 
@@ -50,14 +51,9 @@ class TestImagePipeline:
     def test_label_tuning_improves_zero_shot(self, image_dataset):
         """Check whether label tuning improves or matches zero-shot performance."""
         images, truths = image_dataset
-        zs_preds = torch.as_tensor(
-            [pred.label for pred in self.pipeline.predict(images)]
-        )
+        zs_preds = [pred.label for pred in self.pipeline.predict(images)]
         self.pipeline.fit(images, truths)
-        lt_preds = torch.as_tensor(
-            [pred.label for pred in self.pipeline.predict(images)]
-        )
-        truths = torch.as_tensor(truths)
-        zs_accuracy = (zs_preds == truths).float().mean().item()
-        lt_accuracy = (lt_preds == truths).float().mean().item()
+        lt_preds = [pred.label for pred in self.pipeline.predict(images)]
+        zs_accuracy = np.mean([p == t for p, t in zip(zs_preds, truths)])
+        lt_accuracy = np.mean([p == t for p, t in zip(lt_preds, truths)])
         assert lt_accuracy >= zs_accuracy

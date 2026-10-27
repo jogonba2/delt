@@ -2,6 +2,7 @@
 
 import random
 
+import numpy as np
 import pytest
 import requests
 import torch
@@ -26,7 +27,7 @@ def sounds_dataset():
         "https://soundcamp.org/sounds/382/morse_code_oscillator_-_medium_pitched_PTv.wav"
     ).content
     audios = [bell, morse]
-    truths = [0, 1]
+    truths = ["bell", "morse"]
     return audios, truths
 
 
@@ -50,14 +51,9 @@ class TestAudioPipeline:
     def test_label_tuning_improves_zero_shot(self, sounds_dataset):
         """Check whether label tuning improves or matches zero-shot performance."""
         audios, truths = sounds_dataset
-        zs_preds = torch.as_tensor(
-            [pred.label for pred in self.pipeline.predict(audios)]
-        )
+        zs_preds = [pred.label for pred in self.pipeline.predict(audios)]
         self.pipeline.fit(audios, truths)
-        lt_preds = torch.as_tensor(
-            [pred.label for pred in self.pipeline.predict(audios)]
-        )
-        truths = torch.as_tensor(truths)
-        zs_accuracy = (zs_preds == truths).float().mean().item()
-        lt_accuracy = (lt_preds == truths).float().mean().item()
+        lt_preds = [pred.label for pred in self.pipeline.predict(audios)]
+        zs_accuracy = np.mean([p == t for p, t in zip(zs_preds, truths)])
+        lt_accuracy = np.mean([p == t for p, t in zip(lt_preds, truths)])
         assert lt_accuracy >= zs_accuracy

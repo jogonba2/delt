@@ -14,7 +14,7 @@ class Prediction:
     """A sample prediction."""
 
     probs: list[float]
-    label: int
+    label: int | str
 
 
 @dataclass
