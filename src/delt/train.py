@@ -1,6 +1,5 @@
 """Module for label tuning training."""
 
-from collections import Counter
 from time import time
 
 import numpy as np
@@ -180,8 +179,12 @@ def label_tuning_cv(
         TrainingOutput: containing the tuned label embeddings (N, d), logit scale (1,), training time, and other outputs for monitoring training.
 
     """
+    if isinstance(truths, list):
+        truths = torch.tensor(truths)
+
     n_samples = len(truths)
-    min_class_size = min(Counter(truths.tolist()).values())
+    _, counts = torch.unique(truths, return_counts=True)
+    min_class_size = counts.min().item()
     n_splits = min(num_splits, n_samples, min_class_size)
 
     if n_splits < 2:
