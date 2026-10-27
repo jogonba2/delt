@@ -190,7 +190,7 @@ The directory contains:
 - `label_embeddings.safetensors`: the `label_embeddings` and `logit_scale` tensors, loadable with `safetensors.torch.load_file`.
 - `model.json`: the label names, the training information (hyperparameters, number of samples, training time, loss), the validation performance (accuracy, macro/weighted F1 and metrics per label), and, for `EncoderPipeline`s, the encoder information needed to rebuild it.
 
-`SpanPipeline` does not support saving yet.
+`SpanPipeline` supports `evaluate`, `save` and `load` too. Its `evaluate` takes the gold spans of each text and reports exact-match (offsets and label) precision, recall and F1, micro and per label. In the saved model, `label_embeddings` has one more row than `label_names`, which is the "none" class at the end, and the span settings (`max_span_width`, `negative_ratio`, `seed`, and the "none" verbalization) are kept in `model.json`.
 
 # 🧩 Span detection and classification
 

@@ -42,6 +42,9 @@ class EmbeddingPipeline(ABC):
 
     """
 
+    # Label embeddings that are not named in `label_names`, e.g., the "none" class in span pipelines
+    extra_label_embeddings = 0
+
     def __init__(
         self,
         label_embeddings: torch.Tensor | list,
@@ -188,12 +191,14 @@ class EmbeddingPipeline(ABC):
 
         """
         label_embeddings = torch.as_tensor(self.label_embeddings)
-        if self.label_names is not None and len(self.label_names) != len(
-            label_embeddings
+        num_labels = len(label_embeddings) - self.extra_label_embeddings
+        if (
+            self.label_names is not None
+            and len(self.label_names) != num_labels
         ):
             msg = (
                 f"Got {len(self.label_names)} label names for "
-                f"{len(label_embeddings)} label embeddings."
+                f"{num_labels} label embeddings."
             )
             raise ValueError(msg)
 

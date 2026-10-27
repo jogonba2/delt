@@ -5,6 +5,7 @@ import requests
 from delt import VideoPipeline
 
 
+# Define a helper function
 def download_video(url: str) -> bytes:
     """Download a video from a direct HTTP(S) URL and return it as bytes."""
     response = requests.get(url, timeout=60)

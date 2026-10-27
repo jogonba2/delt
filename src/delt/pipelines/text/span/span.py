@@ -1,7 +1,6 @@
 """Module for span pipelines."""
 
 import random
-from pathlib import Path
 
 import torch
 
@@ -11,6 +10,7 @@ from delt.pipelines.text.span.utils import (
     enumerate_candidates,
     mean_pool_spans,
     select_spans,
+    span_metrics,
 )
 from delt.pipelines.text.text import TextPipeline
 from delt.predict import predict_proba
@@ -26,7 +26,11 @@ class SpanPipeline(TextPipeline):
     each candidate is embedded as the mean of its contextual token embeddings.
     An extra, trainable "none" class represents candidates that are not spans of interest.
     Labels are plain concepts, so label verbalizations are not polluted with tagging prefixes.
+
+    When saved, `label_embeddings` has one more row than `label_names`, which is the "none" class at the end.
     """
+
+    extra_label_embeddings = 1
 
     def __init__(
         self,
@@ -65,21 +69,18 @@ class SpanPipeline(TextPipeline):
         )
         self.label_names = list(label_verbalizations)
 
-    def save(self, path: str | Path) -> Path:
-        """Not supported yet, since the "none" class and the span settings are not saved."""
-        msg = "Saving is not supported yet for `SpanPipeline`."
-        raise NotImplementedError(msg)
-
-    @classmethod
-    def load(cls, path: str | Path, device: str = "cpu") -> "SpanPipeline":
-        """Not supported yet, since the "none" class and the span settings are not saved."""
-        msg = "Loading is not supported yet for `SpanPipeline`."
-        raise NotImplementedError(msg)
-
-    def evaluate(self, *args: object, **kwargs: object) -> dict:
-        """Not supported yet, since metrics would need to be computed on spans."""
-        msg = "Evaluation is not supported yet for `SpanPipeline`."
-        raise NotImplementedError(msg)
+    def _encoder_info(self) -> dict:
+        info = super()._encoder_info()
+        label_verbalizations = dict(info["label_verbalizations"])
+        none_verbalization = label_verbalizations.pop("__none__")
+        return {
+            **info,
+            "label_verbalizations": label_verbalizations,
+            "none_verbalization": none_verbalization,
+            "max_span_width": self.max_span_width,
+            "negative_ratio": self.negative_ratio,
+            "seed": self.seed,
+        }
 
     def _label_index(self, label: int | str) -> int:
         if isinstance(label, str):
@@ -271,3 +272,54 @@ class SpanPipeline(TextPipeline):
                 ]
             )
         return results
+
+    def evaluate(
+        self,
+        data: list[str],
+        truths: list[list[SpanAnnotation]],
+        batch_size: int = 16,
+        embeddings_batch_size: int = 16,
+        threshold: float = 0.5,
+    ) -> dict:
+        """
+        Compute the performance of the pipeline detecting and classifying spans on held-out data.
+
+        A predicted span is correct only if its offsets and label match a gold span. The metrics are kept in the pipeline, so they are saved with `save`. They are replaced by the next call to `evaluate` or `fit`.
+
+        Args:
+            data (list[str]): input texts.
+            truths (list[list[SpanAnnotation]]): gold spans of each text.
+            batch_size (int): the batch size for inference.
+            embeddings_batch_size (int): batch size to get embeddings from the encoder model.
+            threshold (float): minimum score to keep a span, see `predict`.
+
+        Returns:
+            dict: number of texts, micro precision, recall and F1, macro F1, and precision, recall, F1 and support (gold spans) per label.
+
+        """
+        if len(data) != len(truths):
+            msg = "`data` and `truths` must have the same length."
+            raise ValueError(msg)
+
+        label_names = self.label_names or []
+        preds = self.predict(
+            data, batch_size, embeddings_batch_size, threshold
+        )
+        metrics = span_metrics(
+            [{(s.start, s.end, s.label) for s in spans} for spans in preds],
+            [
+                {
+                    (
+                        a.start,
+                        a.end,
+                        label_names[self._label_index(a.label)],
+                    )
+                    for a in annotations
+                }
+                for annotations in truths
+            ],
+            label_names,
+        )
+        metrics["threshold"] = threshold
+        self.validation = {"method": "holdout", **metrics}
+        return metrics

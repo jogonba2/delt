@@ -1,5 +1,6 @@
 """Tests for `delt.SpanPipeline`."""
 
+import json
 import random
 from itertools import pairwise
 
@@ -137,3 +138,64 @@ class TestSpanPipeline:
         texts, truths = span_dataset
         with pytest.raises(NotImplementedError):
             self.pipeline.fit(texts, truths, do_cv=True)
+
+    def test_evaluate_on_training_data(self, span_dataset):
+        """Check that `evaluate` returns span metrics and keeps them."""
+        texts, truths = span_dataset
+        pipeline = self._new_pipeline()
+        pipeline.fit(texts, truths, training_args={"epochs": 200})
+        assert pipeline.validation is None
+
+        metrics = pipeline.evaluate(texts, truths, threshold=0.5)
+        assert metrics["num_samples"] == len(texts)
+        assert metrics["micro"]["f1"] > 0.5
+        assert set(metrics["per_label"]) == {"person", "location"}
+        assert metrics["per_label"]["person"]["support"] == 5
+        assert pipeline.validation == {"method": "holdout", **metrics}
+
+    def test_evaluate_length_mismatch(self, span_dataset):
+        """Check that texts and gold spans must be aligned."""
+        texts, truths = span_dataset
+        with pytest.raises(ValueError, match="same length"):
+            self.pipeline.evaluate(texts, truths[:-1])
+
+    def test_save_load_roundtrip(self, span_dataset, tmp_path):
+        """Check that a loaded span pipeline predicts like the saved one."""
+        texts, truths = span_dataset
+        pipeline = self._new_pipeline()
+        pipeline.fit(texts, truths, training_args={"epochs": 50})
+        pipeline.evaluate(texts, truths)
+        pipeline.save(tmp_path)
+
+        info = json.loads((tmp_path / "model.json").read_text())
+        assert info["label_names"] == ["person", "location"]
+        assert info["validation"]["micro"]
+        assert info["encoder"]["label_verbalizations"] == {
+            "person": "a person name",
+            "location": "a place name",
+        }
+        assert info["encoder"]["none_verbalization"] == (
+            "not a relevant phrase"
+        )
+        assert info["encoder"]["max_span_width"] == 3
+        assert info["encoder"]["negative_ratio"] == 2.0
+
+        loaded = SpanPipeline.load(tmp_path)
+        assert loaded.label_names == ["person", "location"]
+        assert loaded.none_index == 2
+        assert loaded.max_span_width == 3
+        assert len(loaded.label_embeddings) == 3
+        before = pipeline.predict(texts, threshold=0.0)
+        after = loaded.predict(texts, threshold=0.0)
+        assert before == after
+
+    @staticmethod
+    def _new_pipeline():
+        return SpanPipeline(
+            "sentence-transformers/all-MiniLM-L6-v2",
+            "sentence-transformer",
+            {"person": "a person name", "location": "a place name"},
+            "This text is {}",
+            max_span_width=3,
+            negative_ratio=2.0,
+        )

@@ -6,6 +6,7 @@ from delt.pipelines.text.span.utils import (
     enumerate_candidates,
     mean_pool_spans,
     select_spans,
+    span_metrics,
     tokenize_with_offsets,
 )
 
@@ -42,3 +43,39 @@ def test_select_spans_keeps_non_overlapping():
     scores = [0.9, 0.8, 0.7, 0.6]
     assert select_spans(candidates, scores, 0.5) == [0, 3]
     assert select_spans(candidates, scores, 0.95) == []
+
+
+def test_span_metrics():
+    """Check exact-match span metrics, micro and per label."""
+    predicted = [{(0, 5, "person"), (6, 11, "person")}, {(0, 3, "location")}]
+    gold = [{(0, 5, "person"), (12, 16, "location")}, {(0, 3, "location")}]
+    metrics = span_metrics(predicted, gold, ["person", "location", "org"])
+
+    # person: tp=1, fp=1, fn=0. location: tp=1, fp=0, fn=1. org: unused.
+    assert metrics["num_samples"] == 2
+    assert metrics["micro"] == {
+        "precision": 2 / 3,
+        "recall": 2 / 3,
+        "f1": 2 / 3,
+    }
+    assert metrics["per_label"]["person"] == {
+        "precision": 0.5,
+        "recall": 1.0,
+        "f1": 2 / 3,
+        "support": 1,
+    }
+    assert metrics["per_label"]["location"]["recall"] == 0.5
+    assert metrics["per_label"]["location"]["support"] == 2
+    assert metrics["per_label"]["org"]["f1"] == 0.0
+    # "org" is neither gold nor predicted, so it does not count for macro F1
+    assert metrics["macro_f1"] == (2 / 3 + 2 / 3) / 2
+
+
+def test_span_metrics_label_must_match():
+    """Check that a span with the right offsets but a wrong label is wrong."""
+    metrics = span_metrics(
+        [{(0, 5, "person")}], [{(0, 5, "location")}], ["person", "location"]
+    )
+    assert metrics["micro"]["f1"] == 0.0
+    assert metrics["per_label"]["person"]["precision"] == 0.0
+    assert metrics["per_label"]["location"]["recall"] == 0.0
