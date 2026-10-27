@@ -6,7 +6,7 @@ import torch
 from typesafe_sdk import RetryPolicy, TypeSafeClient
 
 from delt.teachers.base import Teacher
-from delt.teachers.text.jev.utils import batch_classify
+from delt.teachers.text.text.jev.utils import batch_classify
 
 
 class JevTextTeacher(Teacher):

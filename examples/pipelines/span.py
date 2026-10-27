@@ -1,10 +1,33 @@
 """Example of span detection and classification with label tuning."""
 
 from delt import SpanPipeline
-from delt.pipelines.text import SpanAnnotation
+from delt.pipelines.text import PredictedSpan, SpanAnnotation
 
-# Set your data and configure the encoder.
-# Labels are plain concepts.
+
+# Define some helper functions
+def show_outputs(texts: list[str], preds: list[list[PredictedSpan]]):
+    for text, spans in zip(texts, preds, strict=True):
+        print(
+            text,
+            [
+                (s.text, pipeline.label_names[s.label], round(s.score, 2))
+                for s in spans
+            ],
+        )
+
+
+def annotate(gold: list[list[tuple[str, str]]]):
+    def annotate_span(text: str, phrase: str, label: str) -> SpanAnnotation:
+        start = text.index(phrase)
+        return SpanAnnotation(start, start + len(phrase), label)
+
+    return [
+        [annotate_span(text, phrase, label) for phrase, label in spans]
+        for text, spans in zip(texts, gold, strict=True)
+    ]
+
+
+# Define your annotated data and label set
 texts = [
     "Alice visited Paris last summer.",
     "Bob moved to Berlin in March.",
@@ -17,18 +40,6 @@ texts = [
     "Amazon opened an office in Tokyo, and Sarah joined the AI team.",
     "The package was shipped by Tesla to Peter in Oslo.",
 ]
-label_verbalizations = {
-    "person": "a person's name",
-    "location": "a city, country or place",
-    "organization": "a company or organization name",
-}
-
-
-def annotate(text: str, phrase: str, label: str) -> SpanAnnotation:
-    start = text.index(phrase)
-    return SpanAnnotation(start, start + len(phrase), label)
-
-
 gold = [
     [("Alice", "person"), ("Paris", "location")],
     [("Bob", "person"), ("Berlin", "location")],
@@ -41,10 +52,16 @@ gold = [
     [("Amazon", "organization"), ("Tokyo", "location"), ("Sarah", "person")],
     [("Tesla", "organization"), ("Peter", "person"), ("Oslo", "location")],
 ]
-truths = [
-    [annotate(text, phrase, label) for phrase, label in spans]
-    for text, spans in zip(texts, gold, strict=True)
-]
+label_verbalizations = {
+    "person": "a person's name",
+    "location": "a city, country or place",
+    "organization": "a company or organization name",
+}
+
+# Annotate the input data
+truths = annotate(gold)
+
+# Set the encoder
 prompt_template = "This is {}"
 encoder_class = "sentence-transformer"
 encoder_name = "sentence-transformers/all-MiniLM-L6-v2"
@@ -61,23 +78,11 @@ pipeline = SpanPipeline(
 
 # Zero-shot prediction
 preds = pipeline.predict(texts, batch_size=8)
+show_outputs(texts, preds)
 
 # Label-tuning training
 training_output = pipeline.fit(texts, truths)
 
 # Prediction after training
-texts = [
-    "A lot of iphones are sold by Apple each year.",
-    "TowerZen was developed by Unbabel.",
-    "This package has been written by Jose from the TransPerfect AI&RD team.",
-]
-
 preds = pipeline.predict(texts, batch_size=8, threshold=0.8)
-for text, spans in zip(texts, preds, strict=True):
-    print(
-        text,
-        [
-            (s.text, pipeline.label_names[s.label], round(s.score, 2))
-            for s in spans
-        ],
-    )
+show_outputs(texts, preds)

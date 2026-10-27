@@ -33,7 +33,7 @@ label_set = ["fake", "real"]
 teacher = LMMVideoTeacher(
     "gemini/gemini-3.5-flash",
     {"temperature": 0},
-    "Classify the following videos into fake or real.",
+    "Classify the following video into fake or real.",
 )
 
 # Generate the labels (`predict`) or probs (`predict_proba`)

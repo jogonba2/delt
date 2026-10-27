@@ -11,7 +11,7 @@ label_set = ["positive", "negative"]
 teacher = LLMTextTeacher(
     "gpt-5.4-nano",
     {"temperature": 0},
-    "Classify the following texts into positive or negative for a sentiment analysis task.",
+    "Classify the following text into positive or negative for a sentiment analysis task.",
 )
 
 # Generate the labels (`predict`) or probs (`predict_proba`)

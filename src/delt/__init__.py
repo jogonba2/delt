@@ -19,6 +19,7 @@ from delt.pipelines import (
 )
 from delt.teachers import (
     JevTextTeacher,
+    LLMSpanTextTeacher,
     LLMTextTeacher,
     LMMAudioTeacher,
     LMMImageTeacher,
@@ -36,6 +37,7 @@ __all__ = [
     "ImagePipeline",
     # Teachers
     "JevTextTeacher",
+    "LLMSpanTextTeacher",
     "LLMTextTeacher",
     "LMMAudioTeacher",
     "LMMImageTeacher",
