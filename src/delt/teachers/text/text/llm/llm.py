@@ -3,8 +3,9 @@
 import torch
 from torch.nn import functional as F
 
-from delt.common import generate_completions, make_output_model
+from delt.common import make_output_model
 from delt.teachers.base import Teacher
+from delt.teachers.utils import generate_completions
 
 
 class LLMTextTeacher(Teacher):

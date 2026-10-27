@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, create_model
+from pydantic import BaseModel, Field, create_model
 
 
 def format_prompt(
@@ -25,17 +25,35 @@ def format_prompt(
     ]
 
 
-def make_output_model(label_set: list[str]) -> type[BaseModel]:
+def make_output_model(
+    label_set: list[str],
+    with_reasoning: bool = False,
+) -> type[BaseModel]:
     """
     Create a pydantic model dynamically to be used as structured output in classification tasks.
 
     Args:
         label_set (list[str]): list of label names.
+        with_reasoning (bool): if True, add a `reasoning` field generated before the label.
 
     Returns:
         type[BaseModel]: a pydantic model.
 
     """
-    return create_model(
-        "Output", label=(Literal.__getitem__(tuple(label_set)), ...)
+    LabelType = Literal[tuple(label_set)]
+    fields = {}
+    if with_reasoning:
+        fields["reasoning"] = (
+            str,
+            Field(
+                ...,
+                description="Brief justification for the chosen label, written before deciding.",
+            ),
+        )
+    fields["label"] = (
+        LabelType,
+        Field(
+            ..., description="The single label that best describes the input."
+        ),
     )
+    return create_model("Output", **fields)

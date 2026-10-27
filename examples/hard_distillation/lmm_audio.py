@@ -19,7 +19,7 @@ label_set = ["bell", "morse"]
 teacher = LMMAudioTeacher(
     "gemini/gemini-3.5-flash",
     {"temperature": 0},
-    "Classify the following texts into bell or morse",
+    "Classify the following audio into bell or morse",
 )
 
 # Generate the labels (`predict`) or probs (`predict_proba`)

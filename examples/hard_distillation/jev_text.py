@@ -23,7 +23,7 @@ teacher = JevTextTeacher(
 )
 
 # Generate the labels (`predict`) or probs (`predict_proba`)
-truth_probas = teacher.predict_proba(texts, label_set)
+truth_probas = teacher.predict(texts, label_set)
 
 # Create the label verbalizations (same order as the label set)
 label_verbalizations = {

@@ -1,12 +1,17 @@
 """Package for teacher models."""
 
-from .audio import LMMAudioTeacher
-from .image import LMMImageTeacher
-from .text import JevTextTeacher, LLMTextTeacher
-from .video import LMMVideoTeacher
+from delt.teachers.audio import LMMAudioTeacher
+from delt.teachers.image import LMMImageTeacher
+from delt.teachers.text import (
+    JevTextTeacher,
+    LLMSpanTextTeacher,
+    LLMTextTeacher,
+)
+from delt.teachers.video import LMMVideoTeacher
 
 __all__ = [
     "JevTextTeacher",
+    "LLMSpanTextTeacher",
     "LLMTextTeacher",
     "LMMAudioTeacher",
     "LMMImageTeacher",

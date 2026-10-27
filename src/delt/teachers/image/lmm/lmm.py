@@ -5,8 +5,9 @@ from io import BytesIO
 import torch
 from torch.nn import functional as F
 
-from delt.common import base64_encode, generate_completions, make_output_model
+from delt.common import base64_encode, make_output_model
 from delt.teachers.base import Teacher
+from delt.teachers.utils import generate_completions
 from delt.types import Image
 
 

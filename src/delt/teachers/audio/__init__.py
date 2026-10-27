@@ -1,5 +1,5 @@
 """Package for audio teachers."""
 
-from .lmm import LMMAudioTeacher
+from delt.teachers.audio.lmm import LMMAudioTeacher
 
 __all__ = ["LMMAudioTeacher"]

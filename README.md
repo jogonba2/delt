@@ -21,7 +21,7 @@ Applications where embeddings serve as persistent representations—such as sema
 
 - 🚀 Perform **zero-shot classification** without training data.
 - 🎯 Fine-tune classifiers using only a few labeled examples through **label tuning**.
-- 🌍 Work across **text, images, audio, and video** using a unified API.
+- 🌍 Work across **text (& spans), images, audio, and video** using a unified API.
 - ⚡ Train in seconds by optimizing only lightweight label embeddings.
 - 💻 Run inference efficiently on CPU once embeddings are available.
 - 🤖 Distill powerful LLMs and multimodal models into compact, production-ready classifiers.
@@ -100,6 +100,7 @@ TYPESAFE_API_KEY=...
 >
 > `ffmpeg` is required for audio processing by `libtorchcodec`, which is used by the audio processors. Please install an `ffmpeg` version compatible with `torchaudio==2.10.0`. Versions 4, 5, 6, 7, and 8 are supported.
 > Make sure `ffmpeg` is correctly installed and available in your `PATH` so that Torch can load it properly.
+> MacOS users: if you installed `ffmpeg` through `homebrew` with a versioned formula, please, add the versioned path to your `zshrc` file, e.g., `export DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/opt/ffmpeg@8/lib` and create a symlink as `ln -s /opt/homebrew/opt/ffmpeg@8 /opt/homebrew/opt/ffmpeg`
 
 # 🚀 Pipeline example
 
@@ -167,12 +168,31 @@ training_output = pipeline.fit(input_embeddings, truths)
 preds = pipeline.predict(input_embeddings, batch_size=8)
 ```
 
+# 🧩 Span detection and classification
+
+`SpanPipeline` extends text label tuning to span tasks such as NER or aspect-based sentiment analysis. Rather than BIO tagging, which would add `B-`/`I-` noise to the label embeddings, every contiguous span of up to `max_span_width` words is a candidate. Each text is encoded once, and each candidate is embedded as the mean of its contextual token embeddings and classified against the label embeddings, plus a trainable "none" class for candidates that are not spans of interest. Predicted spans never overlap. See the [span example](examples/pipelines/span.py).
+
+```python
+from delt import SpanPipeline
+from delt.pipelines.text import SpanAnnotation
+
+pipeline = SpanPipeline(
+    "sentence-transformers/all-MiniLM-L6-v2",
+    "sentence-transformer",
+    {"person": "a person name", "location": "a place name"},
+    "This is {}",
+)
+# `truths` has one list of `SpanAnnotation(start, end, label)` per text (character offsets, `end` exclusive)
+pipeline.fit(texts, truths)
+spans = pipeline.predict(texts, threshold=0.5)  # list[list[PredictedSpan]]
+```
+
 
 # 🧪 Distillation example
 
 Instead of manually annotating thousands of examples, a stronger model can act as a **teacher**, while `delt` learns a lightweight **student**.
 
-Both **soft** and **hard** distillation are supported by `delt`. You can take a look to the [soft distillation](src/delt/examples/soft_distillation/) and [hard distillation](src/delt/examples/hard_distillation/) folders to see how it works. Here we show an example to distill `gpt-5.4-nano` into label embeddings for a sentiment analysis task:
+Both **soft** and **hard** distillation are supported by `delt` for every modality, including text span classification. You can take a look to the [soft distillation](src/delt/examples/soft_distillation/) and [hard distillation](src/delt/examples/hard_distillation/) folders to see how it works. Here we show an example to distill `gpt-5.4-nano` into label embeddings for a sentiment analysis task:
 
 ```python
 from delt.pipelines import TextPipeline
@@ -217,7 +237,6 @@ training_output = pipeline.fit(texts, truths)
 # Prediction after training
 preds = pipeline.predict(texts, batch_size=8)
 ```
-
 
 # 🖥 User Interface
 

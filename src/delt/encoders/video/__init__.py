@@ -1,5 +1,5 @@
 """Package for video encoders."""
 
-from .xclip import XclipEncoder
+from delt.encoders.video.xclip import XclipEncoder
 
 __all__ = ["XclipEncoder"]

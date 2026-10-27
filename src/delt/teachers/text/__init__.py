@@ -1,6 +1,6 @@
-"""Package for text teachers."""
+"""Text teacher models."""
 
-from .jev import JevTextTeacher
-from .llm import LLMTextTeacher
+from delt.teachers.text.span import LLMSpanTextTeacher
+from delt.teachers.text.text import JevTextTeacher, LLMTextTeacher
 
-__all__ = ["JevTextTeacher", "LLMTextTeacher"]
+__all__ = ["JevTextTeacher", "LLMSpanTextTeacher", "LLMTextTeacher"]

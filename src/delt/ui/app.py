@@ -384,7 +384,7 @@ with tab_image:
                         del preds_post
                         gc.collect()
                     except Exception:
-                        pass
+                        st.info("Passing.")
                 except Exception as e:
                     st.error(f"An error occurred: {e}")
         else:
@@ -508,7 +508,7 @@ with tab_audio:
                         del preds_post
                         gc.collect()
                     except Exception:
-                        pass
+                        st.info("Passing.")
                 except Exception as e:
                     st.error(f"An error occurred: {e}")
         else:
@@ -635,7 +635,7 @@ with tab_video:
                         del preds_post
                         gc.collect()
                     except Exception:
-                        pass
+                        st.info("Passing.")
                 except Exception as e:
                     st.error(f"An error occurred: {e}")
         else:

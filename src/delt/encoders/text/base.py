@@ -79,6 +79,23 @@ class TextEncoder(Encoder):
         """
         ...
 
+    @abstractmethod
+    def get_token_embeddings(
+        self, texts: list[str], batch_size: int = 64
+    ) -> list[tuple[torch.Tensor, list[tuple[int, int]]]]:
+        """
+        Embed the tokens of each text in context, using the base encoder model.
+
+        Args:
+            texts (list[str]): a list of texts.
+            batch_size (int): batch size for inference.
+
+        Returns:
+            list[tuple[torch.Tensor, list[tuple[int, int]]]]: for each text, the token embeddings with shape (T, d) and the (start, end) character offsets of each token, with `end` exclusive. Special tokens are dropped and texts longer than the encoder's max length are truncated.
+
+        """
+        ...
+
     def get_image_embeddings(
         self, images: list[Image], batch_size: int = 8
     ) -> torch.Tensor:

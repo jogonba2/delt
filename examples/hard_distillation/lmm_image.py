@@ -19,7 +19,7 @@ label_set = ["cat", "dog"]
 teacher = LMMImageTeacher(
     "gemini/gemini-3.5-flash",
     {"temperature": 0},
-    "Classify the following images into cat or dog.",
+    "Classify the following image into cat or dog.",
 )
 
 # Generate the labels (`predict`) or probs (`predict_proba`)

@@ -2,11 +2,11 @@
 
 from typing import Any
 
-from .audio import ClapEncoder, GlapEncoder
-from .base import Encoder
-from .image import ClipEncoder, SiglipEncoder
-from .text import SentenceTransformerEncoder
-from .video import XclipEncoder
+from delt.encoders.audio import ClapEncoder, GlapEncoder
+from delt.encoders.base import Encoder
+from delt.encoders.image import ClipEncoder, SiglipEncoder
+from delt.encoders.text import SentenceTransformerEncoder
+from delt.encoders.video import XclipEncoder
 
 REGISTRY: dict[str, type[Encoder]] = {
     "glap": GlapEncoder,
