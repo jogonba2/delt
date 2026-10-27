@@ -25,7 +25,7 @@ def evaluate(
     Args:
         input_embeddings (torch.Tensor | list): the input embeddings with shape (N, d).
         label_embeddings (torch.Tensor | list): the label embeddings with shape (L, d).
-        logit_scale (torch.Tensor): the logit scale with shape (1,).
+        logit_scale (torch.Tensor): the logit scale in log space with shape (1,), i.e., the logits are multiplied by `logit_scale.exp()`.
         truths (torch.Tensor | list): reference labels as integers (or label names, if `label_names` is set) with shape (N,) or expected probabilities with shape (N, L).
         label_names (list[str] | None): the names of the labels, in the same order as `label_embeddings`.
         batch_size (int): the batch size for inference.

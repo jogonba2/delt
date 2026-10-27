@@ -1,16 +1,21 @@
 """Module for inference with dual encoder models."""
 
+import math
+
 import numpy as np
 import torch
 
 from delt.common import batchify_tensor
 from delt.types import Prediction
 
+# Initial logit scale, in log space as in CLIP: logits are multiplied by `exp(DEFAULT_LOGIT_SCALE) = 1 / 0.07`
+DEFAULT_LOGIT_SCALE = math.log(1 / 0.07)
+
 
 def predict_proba(
     input_embeddings: torch.Tensor,
     label_embeddings: torch.Tensor,
-    logit_scale: torch.Tensor,
+    logit_scale: torch.Tensor | None = None,
     batch_size: int = 16,
 ) -> np.ndarray:
     """
@@ -19,13 +24,16 @@ def predict_proba(
     Args:
         input_embeddings (torch.Tensor): the input embeddings with shape (N, d).
         label_embeddings (torch.Tensor): the label embeddings with shape (L, d).
-        logit_scale (torch.Tensor): the logit scale with shape (1,).
+        logit_scale (torch.Tensor | None): the logit scale in log space with shape (1,), i.e., the logits are multiplied by `logit_scale.exp()`. If `None`, `DEFAULT_LOGIT_SCALE` is used.
         batch_size (int): the batch size.
 
     Returns:
         np.ndarray: array with shape (N, L), with the probabilities of each input for each label.
 
     """
+    if logit_scale is None:
+        logit_scale = torch.tensor([DEFAULT_LOGIT_SCALE])
+
     # Move to the same device
     if label_embeddings.device != input_embeddings.device:
         label_embeddings = label_embeddings.to(input_embeddings)
@@ -43,7 +51,7 @@ def predict_proba(
 def predict(
     input_embeddings: torch.Tensor,
     label_embeddings: torch.Tensor,
-    logit_scale: torch.Tensor,
+    logit_scale: torch.Tensor | None = None,
     batch_size: int = 16,
     label_names: list[str] | None = None,
 ) -> list[Prediction]:
@@ -53,7 +61,7 @@ def predict(
     Args:
         input_embeddings (torch.Tensor): the input embeddings with shape (N, d).
         label_embeddings (torch.Tensor): the label embeddings with shape (L, d).
-        logit_scale (torch.Tensor): the logit scale with shape (1,).
+        logit_scale (torch.Tensor | None): the logit scale in log space with shape (1,), i.e., the logits are multiplied by `logit_scale.exp()`. If `None`, `DEFAULT_LOGIT_SCALE` is used.
         batch_size (int): the batch size.
         label_names (list[str] | None): the names of the labels, in the same order as `label_embeddings`. If `None`, labels are returned as indices.
 

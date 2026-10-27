@@ -10,7 +10,7 @@ from torch.nn import functional as F
 from tqdm import tqdm
 
 from delt.common import dict_cartesian_product, unimodal_kfold
-from delt.predict import predict
+from delt.predict import DEFAULT_LOGIT_SCALE, predict
 from delt.types import TrainingOutput
 
 GRID_SEARCH_PARAMS = {
@@ -84,9 +84,7 @@ def label_tuning(
     trainable_label_embeddings = nn.Parameter(
         label_embeddings.clone(), requires_grad=True
     )
-    logit_scale = nn.Parameter(
-        torch.ones([]) * torch.log(torch.tensor(1 / 0.07))
-    )
+    logit_scale = nn.Parameter(torch.tensor(DEFAULT_LOGIT_SCALE))
 
     # Instantiate optimizer and loss
     optimizer = torch.optim.AdamW(

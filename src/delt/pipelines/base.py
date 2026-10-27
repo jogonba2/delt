@@ -12,7 +12,7 @@ from safetensors.torch import load_file, save_file
 from delt.common import format_prompt, labels_to_indices
 from delt.encoders import get_encoder
 from delt.evaluate import evaluate as compute_metrics
-from delt.predict import predict
+from delt.predict import DEFAULT_LOGIT_SCALE, predict
 from delt.train import label_tuning, label_tuning_cv
 from delt.types import Audio, Image, Prediction, TrainingOutput, Video
 
@@ -56,7 +56,7 @@ class EmbeddingPipeline(ABC):
 
         Args:
             label_embeddings (torch.Tensor | list): the label embeddings with shape (N, d).
-            logit_scale (torch.Tensor | None): the scale factor for the logits with shape (1,).
+            logit_scale (torch.Tensor | None): the scale factor for the logits in log space with shape (1,), i.e., the logits are multiplied by `logit_scale.exp()`. Defaults to `log(1 / 0.07)`, the initial value used in label tuning, so zero-shot and tuned probabilities are comparable.
             label_names (list[str] | None): the names of the labels, in the same order as `label_embeddings`.
                                             If given, label names can be used in `truths` and are returned
                                             as the predicted labels.
@@ -65,7 +65,9 @@ class EmbeddingPipeline(ABC):
         self.label_embeddings = label_embeddings
         self.label_names = label_names
         self.logit_scale = (
-            logit_scale if logit_scale is not None else torch.tensor([1.0])
+            logit_scale
+            if logit_scale is not None
+            else torch.tensor([DEFAULT_LOGIT_SCALE])
         )
         self.training_output: TrainingOutput | None = None
         self.validation: dict | None = None

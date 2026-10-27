@@ -48,6 +48,19 @@ class TestImagePipeline:
             prompt_template,
         )
 
+    def test_zero_shot_is_correct(self, image_dataset):
+        """Check that zero-shot gets the right labels, with non-flat probs."""
+        images, truths = image_dataset
+        pipeline = ImagePipeline(
+            "google/siglip2-base-patch16-naflex",
+            "siglip",
+            {"cat": "cat", "dog": "dog"},
+            "The animal in the image is a {}",
+        )
+        preds = pipeline.predict(images)
+        assert [pred.label for pred in preds] == truths
+        assert all(pred.probs.max() > 0.6 for pred in preds)
+
     def test_label_tuning_improves_zero_shot(self, image_dataset):
         """Check whether label tuning improves or matches zero-shot performance."""
         images, truths = image_dataset

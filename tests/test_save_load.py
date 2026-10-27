@@ -71,6 +71,31 @@ def test_roundtrip_gives_same_predictions(tmp_path, data):
     )
 
 
+def test_default_logit_scale_matches_label_tuning(data):
+    """Check that zero-shot uses the same scale that label tuning starts from."""
+    embeddings, labels, centers, _ = data
+    pipeline = EmbeddingPipeline(centers)
+    assert pipeline.logit_scale.shape == (1,)
+    assert pipeline.logit_scale.exp().item() == pytest.approx(1 / 0.07)
+
+    # Orthogonal classes: the zero-shot probs of a perfect match are not flat
+    probs = pipeline.predict(embeddings[:1])[0].probs
+    assert probs.max() > 0.99
+
+
+def test_predict_defaults_to_default_logit_scale(data):
+    """Check that `predict` without a logit scale is the pipeline zero-shot."""
+    from delt.predict import predict
+
+    embeddings, _, centers, _ = data
+    preds = predict(embeddings, centers)
+    zero_shot = EmbeddingPipeline(centers).predict(embeddings)
+    assert all(
+        (a.probs == b.probs).all() and a.label == b.label
+        for a, b in zip(preds, zero_shot, strict=True)
+    )
+
+
 def test_save_without_training_or_names(tmp_path, data):
     """Check that a zero-shot pipeline can be saved without training info."""
     _, _, centers, _ = data
