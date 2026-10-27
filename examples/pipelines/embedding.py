@@ -4,26 +4,39 @@ import torch
 
 from delt import EmbeddingPipeline
 
-# Define your input embeddings
-input_embeddings = torch.vstack([torch.randn(5, 16), torch.randn(5, 16) + 5])
-
-# Define your label embeddings
-label_embeddings = torch.vstack([torch.randn(1, 16), torch.randn(1, 16) + 5])
-
-# Define your truth labels
-truths = ["positive"] * 5 + ["negative"] * 5
-
 # Instantiate the pipeline
+label_embeddings = torch.vstack(
+    [torch.randn(1, 16) - 3, torch.randn(1, 16) + 3]
+)
 pipeline = EmbeddingPipeline(
     label_embeddings, label_names=["negative", "positive"]
 )
 
 # Zero-shot prediction
-preds = pipeline.predict(input_embeddings, batch_size=8)
+test_embeddings = torch.vstack(
+    [torch.randn(2, 16) - 3, torch.randn(2, 16) + 3]
+)
+preds = pipeline.predict(test_embeddings, batch_size=8)
 
 # Label-tuning training
-training_output = pipeline.fit(input_embeddings, truths, do_cv=False)
+training_embeddings = torch.vstack(
+    [torch.randn(5, 16) - 3, torch.randn(5, 16) + 3]
+)
+training_truths = ["negative"] * 5 + ["positive"] * 5
+training_output = pipeline.fit(
+    training_embeddings, training_truths, do_cv=False
+)
 
-# Prediction after training
-preds = pipeline.predict(input_embeddings, batch_size=8)
-print(preds)
+# Predict after training
+preds = pipeline.predict(test_embeddings, batch_size=8)
+
+# Evaluate
+test_truths = ["negative"] * 2 + ["positive"] * 2
+results = pipeline.evaluate(test_embeddings, test_truths, batch_size=8)
+
+# Save the pipeline
+pipeline.save("checkpoints/my-embedding-model")
+
+# Load the pipeline and predict again
+pipeline = EmbeddingPipeline.load("checkpoints/my-embedding-model")
+preds = pipeline.predict(test_embeddings, batch_size=8)

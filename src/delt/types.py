@@ -27,6 +27,8 @@ class TrainingOutput:
     loss: float
     trained_param_count: int
     hyperparams: dict
+    num_train_samples: int | None = None
+    validation: dict | None = None
 
 
 Audio: TypeAlias = bytes | AudioDecoder

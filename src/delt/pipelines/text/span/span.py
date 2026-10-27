@@ -1,6 +1,7 @@
 """Module for span pipelines."""
 
 import random
+from pathlib import Path
 
 import torch
 
@@ -63,6 +64,22 @@ class SpanPipeline(TextPipeline):
             prompt_template,
         )
         self.label_names = list(label_verbalizations)
+
+    def save(self, path: str | Path) -> Path:
+        """Not supported yet, since the "none" class and the span settings are not saved."""
+        msg = "Saving is not supported yet for `SpanPipeline`."
+        raise NotImplementedError(msg)
+
+    @classmethod
+    def load(cls, path: str | Path, device: str = "cpu") -> "SpanPipeline":
+        """Not supported yet, since the "none" class and the span settings are not saved."""
+        msg = "Loading is not supported yet for `SpanPipeline`."
+        raise NotImplementedError(msg)
+
+    def evaluate(self, *args: object, **kwargs: object) -> dict:
+        """Not supported yet, since metrics would need to be computed on spans."""
+        msg = "Evaluation is not supported yet for `SpanPipeline`."
+        raise NotImplementedError(msg)
 
     def _label_index(self, label: int | str) -> int:
         if isinstance(label, str):

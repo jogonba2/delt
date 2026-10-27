@@ -52,21 +52,20 @@ gold = [
     [("Amazon", "organization"), ("Tokyo", "location"), ("Sarah", "person")],
     [("Tesla", "organization"), ("Peter", "person"), ("Oslo", "location")],
 ]
+
+# Annotate the input data
+truths = annotate(gold)
+
+# Instantiate the pipeline
 label_verbalizations = {
     "person": "a person's name",
     "location": "a city, country or place",
     "organization": "a company or organization name",
 }
-
-# Annotate the input data
-truths = annotate(gold)
-
-# Set the encoder
 prompt_template = "This is {}"
 encoder_class = "sentence-transformer"
 encoder_name = "sentence-transformers/all-MiniLM-L6-v2"
 
-# Instantiate the pipeline
 pipeline = SpanPipeline(
     encoder_name,
     encoder_class,

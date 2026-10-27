@@ -170,6 +170,28 @@ training_output = pipeline.fit(input_embeddings, truths)
 preds = pipeline.predict(input_embeddings, batch_size=8)
 ```
 
+# 📦 Deploying a label tuned model
+
+A trained pipeline can be saved to a directory with `save`, and restored with `load`. Only the label embeddings are saved, so the artifact is tiny and works with any precomputed embeddings from the same encoder.
+
+```python
+pipeline.fit(input_embeddings, truths)
+
+# Optionally, measure the performance on held-out data, so it is saved with the model
+# (`fit(..., do_cv=True)` also saves the cross-validation performance)
+metrics = pipeline.evaluate(val_embeddings, val_truths)
+
+pipeline.save("my_model")
+
+pipeline = EmbeddingPipeline.load("my_model")
+```
+
+The directory contains:
+- `label_embeddings.safetensors`: the `label_embeddings` and `logit_scale` tensors, loadable with `safetensors.torch.load_file`.
+- `model.json`: the label names, the training information (hyperparameters, number of samples, training time, loss), the validation performance (accuracy, macro/weighted F1 and metrics per label), and, for `EncoderPipeline`s, the encoder information needed to rebuild it.
+
+`SpanPipeline` does not support saving yet.
+
 # 🧩 Span detection and classification
 
 `SpanPipeline` extends text label tuning to span tasks such as NER or aspect-based sentiment analysis. Rather than BIO tagging, which would add `B-`/`I-` noise to the label embeddings, every contiguous span of up to `max_span_width` words is a candidate. Each text is encoded once, and each candidate is embedded as the mean of its contextual token embeddings and classified against the label embeddings, plus a trainable "none" class for candidates that are not spans of interest. Predicted spans never overlap. See the [span example](examples/pipelines/span.py).

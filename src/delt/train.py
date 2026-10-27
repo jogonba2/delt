@@ -155,6 +155,7 @@ def label_tuning(
             "dropout": dropout,
             "drift_coefficient": drift_coefficient,
         },
+        num_train_samples=len(truths),
     )
 
 
@@ -198,7 +199,7 @@ def label_tuning_cv(
         input_embeddings, truths, n_splits=n_splits
     )
 
-    best_params, best_score = None, -1
+    best_params, best_score, best_scores = None, -1, []
 
     pbar = tqdm(hyperparams, desc="Hyperparameter search")
 
@@ -230,12 +231,21 @@ def label_tuning_cv(
 
         if score > best_score:
             best_score = score
+            best_scores = scores
             best_params = experiment_params
 
     print("\nBest macro F1:", best_score)
     print("Best params:", best_params)
 
     # Train final model with best params
-    return label_tuning(
+    output = label_tuning(
         input_embeddings, label_embeddings, truths, **best_params
     )
+    output.validation = {
+        "method": "cross_validation",
+        "num_splits": n_splits,
+        "macro_f1": best_score,
+        "macro_f1_std": float(np.std(best_scores)),
+        "macro_f1_per_fold": [float(score) for score in best_scores],
+    }
+    return output

@@ -556,7 +556,7 @@ wheels = [
 
 [[package]]
 name = "deltpy"
-version = "1.7.2"
+version = "1.8.0"
 source = { editable = "." }
 dependencies = [
     { name = "accelerate" },
@@ -567,6 +567,7 @@ dependencies = [
     { name = "litellm" },
     { name = "protobuf" },
     { name = "python-dotenv" },
+    { name = "safetensors" },
     { name = "scikit-learn", version = "1.7.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "scikit-learn", version = "1.9.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "sentence-transformers" },
@@ -600,6 +601,7 @@ requires-dist = [
     { name = "litellm", specifier = ">=1.92.0" },
     { name = "protobuf", specifier = ">=6.32.1" },
     { name = "python-dotenv", specifier = ">=1.2.2" },
+    { name = "safetensors", specifier = ">=0.4.0" },
     { name = "scikit-learn", specifier = ">=1.7.2" },
     { name = "sentence-transformers", specifier = "<=5.6.0" },
     { name = "sentencepiece", specifier = ">=0.2.1" },
