@@ -7,6 +7,7 @@ from delt.teachers import LLMSpanTextTeacher
 
 # Define some helper functions
 def show_outputs(texts: list[str], preds: list[list[PredictedSpan]]):
+    """Print the predicted spans for each text."""
     for text, spans in zip(texts, preds, strict=True):
         print(
             text,
@@ -18,6 +19,8 @@ def show_outputs(texts: list[str], preds: list[list[PredictedSpan]]):
 
 
 def annotate(silver: list[list[tuple[str, str]]]):
+    """Convert (phrase, label) pairs into span annotations."""
+
     def annotate_span(text: str, phrase: str, label: str) -> SpanAnnotation:
         start = text.index(phrase)
         return SpanAnnotation(start, start + len(phrase), label)

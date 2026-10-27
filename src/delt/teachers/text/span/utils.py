@@ -1,3 +1,5 @@
+"""Utilities for the LLM span text teacher."""
+
 from typing import Literal
 
 from pydantic import BaseModel, Field, create_model
@@ -33,7 +35,7 @@ def make_span_output_model(label_set: list[str]) -> type[BaseModel]:
 
 def make_spans_output_model(label_set: list[str]) -> type[BaseModel]:
     """
-    Create a pydantic model dynamically to be used as structured output in span classification
+    Create a pydantic model dynamically to be used as structured output in span classification.
 
     Args:
         label_set (list[str]): list of label names.

@@ -11,8 +11,8 @@ from delt.teachers.video import LMMVideoTeacher
 
 __all__ = [
     "JevTextTeacher",
-    "LLMTextTeacher",
     "LLMSpanTextTeacher",
+    "LLMTextTeacher",
     "LMMAudioTeacher",
     "LMMImageTeacher",
     "LMMVideoTeacher",
