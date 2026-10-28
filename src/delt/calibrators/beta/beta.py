@@ -59,7 +59,7 @@ class BetaCalibrator(Calibrator):
 
         result = minimize(
             loss,
-            x0=np.array((1.0, 1.0, 1.0)),
+            x0=np.array((1.0, 1.0, 0.0)),
             jac=True,
             method="L-BFGS-B",
             bounds=[(0, None), (0, None), (None, None)],
@@ -96,7 +96,7 @@ class BetaCalibrator(Calibrator):
                     "Label %d has no positive or no negative samples, so it is left uncalibrated.",
                     label,
                 )
-                parameters.append((1.0, 1.0, 1.0))
+                parameters.append((1.0, 1.0, 0.0))
                 continue
             parameters.append(
                 self._fit_label(probs[:, label], targets[:, label])

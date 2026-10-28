@@ -137,6 +137,7 @@ class EmbeddingPipeline(ABC):
         self.logit_scale = output.logit_scale
         self.training_output = output
         self.validation = output.validation
+        self.calibrator = None
         return output
 
     def calibrate(

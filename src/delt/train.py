@@ -243,9 +243,6 @@ def label_tuning_cv(
             best_scores = scores
             best_params = experiment_params
 
-    print("\nBest macro F1:", best_score)
-    print("Best params:", best_params)
-
     # Train final model with best params
     output = label_tuning(
         input_embeddings, label_embeddings, truths, **best_params
