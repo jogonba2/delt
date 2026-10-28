@@ -25,8 +25,9 @@ Applications where embeddings serve as persistent representations—such as sema
 - ⚡ Train in seconds by optimizing only lightweight label embeddings.
 - 💻 Run inference efficiently on CPU once embeddings are available.
 - 🤖 Distill powerful LLMs and multimodal models into compact, production-ready classifiers.
+- ⚖️ Post-hoc calibration of label tuning models easily to trust on probabilities.
 
-Whether you have **zero**, **ten**, or **millions** annotated samples, `delt` provides a simple pipeline that scales with your data.
+Whether you have **zero**, **ten**, or **thousand** annotated samples, `delt` provides a simple pipeline that scales with your data.
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/jogonba2/delt/refs/heads/main/assets/delt_diagram.png" alt="Diagram" width="600"><br>
@@ -64,17 +65,25 @@ This approach enables knowledge from highly capable models to be compressed into
 
 `delt` provides ready-to-use encoders for every modality. However, you're also free to use precomputed embeddings instead.
 
-| Modality | Provided encoders |
-|----------|------------------|
-| 🈳 Text | Sentence Transformers |
-| 🖼 Image | CLIP, SigLIP, SigLIP2 |
-| 🔊 Audio | CLAP, GLAP |
-| 🎥 Video | X-CLIP |
+<table align="center">
+  <thead>
+    <tr>
+      <th>Modality</th>
+      <th>Provided encoders</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td>🈳 Text (&amp; spans)</td><td>Sentence Transformers</td></tr>
+    <tr><td>🖼 Image</td><td>CLIP, SigLIP, SigLIP2</td></tr>
+    <tr><td>🔊 Audio</td><td>CLAP, GLAP</td></tr>
+    <tr><td>🎥 Video</td><td>X-CLIP</td></tr>
+  </tbody>
+</table>
 
 Every modality follows exactly the same workflow, so learning one modality means learning them all:
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/jogonba2/delt/refs/heads/main/assets/pipeline.png" alt="Pipeline" width="600"><br>
+  <img src="assets/pipeline.png" alt="Pipeline" width="500"><br>
   <strong>Figure 2.</strong> A pipeline in delt works in the same way for every modality.
 </p>
 
@@ -102,142 +111,220 @@ TYPESAFE_API_KEY=...
 > Make sure `ffmpeg` is correctly installed and available in your `PATH` so that Torch can load it properly.
 > MacOS users: if you installed `ffmpeg` through `homebrew` with a versioned formula, please, add the versioned path to your `zshrc` file, e.g., `export DYLD_FALLBACK_LIBRARY_PATH=/opt/homebrew/opt/ffmpeg@8/lib` and create a symlink as `ln -s /opt/homebrew/opt/ffmpeg@8 /opt/homebrew/opt/ffmpeg`
 
-# 🚀 Pipeline example
+# 🚀 Pipeline
 
-The API is intentionally minimal. For examples of how to use `delt` for every modality, take a look to the [pipeline examples folder](src/delt/examples/pipelines).
+The API is intentionally minimal. For examples of how to use `delt` for every modality, take a look to the [pipeline examples folder](examples/pipelines).
 
-`truths` are given as label names (the keys of `label_verbalizations`), and `predict` returns the label name in `Prediction.label`. Label indices (the position of the label in `label_verbalizations`) are also accepted in `truths`.
+The following snippet shows how to use the `TextPipeline`, and the same design applies to every other supported modality.
 
 ```python
 from delt import TextPipeline
 
-# Set your data and configure the encoder
-texts = ["I'm happy", "I'm sad", "You're strong", "I hate you."]
+# Instantiate the pipeline
 label_verbalizations = {
     "positive": "really positive",
     "negative": "really negative",
 }
-truths = ["positive", "negative", "positive", "negative"]
 prompt_template = "This text is {}"
 encoder_class = "sentence-transformer"
 encoder_name = "sentence-transformers/all-MiniLM-L6-v2"
-
-# Instantiate the pipeline
 pipeline = TextPipeline(
     encoder_name, encoder_class, label_verbalizations, prompt_template
 )
 
 # Zero-shot prediction
-preds = pipeline.predict(texts, batch_size=8)
+test_texts = ["I don't like you"]
+preds = pipeline.predict(test_texts, batch_size=8)
 
 # Label-tuning training
-training_output = pipeline.fit(texts, truths)
+training_texts = ["I'm happy", "I'm sad", "You're strong", "I hate you."]
+training_truths = ["positive", "negative", "positive", "negative"]
+training_output = pipeline.fit(training_texts, training_truths)
 
-# Prediction after training
-preds = pipeline.predict(texts, batch_size=8)
+# Calibrate
+calibration_texts = ["You are soooo good", "You are soooo bad"]
+calibration_truths = ["positive", "negative"]
+calibrator = pipeline.calibrate(calibration_texts, calibration_truths)
+
+# Predict after training
+preds = pipeline.predict(test_texts, batch_size=8)
+
+# Evaluate
+test_truths = ["negative"]
+results = pipeline.evaluate(test_texts, test_truths, batch_size=8)
+
+# Save the pipeline
+pipeline.save("checkpoints/my-text-model")
+
+# Load the pipeline and predict again
+pipeline = TextPipeline.load("checkpoints/my-text-model")
+preds = pipeline.predict(test_texts, batch_size=8)
 ```
 
-The same design applies to **images**, **audio**, and **video**.
-
-# ⚡ Label tuning example
+# ⚡ Label tuning
 If you already have precomputed embeddings and annotations, you can use the `EmbeddingPipeline` to train label embeddings and perform inference.
 
 ```python
 import torch
 from delt import EmbeddingPipeline
 
-# Define your input embeddings
-input_embeddings = torch.vstack(
-    [torch.randn(100, 16), torch.randn(100, 16) + 2]
+# Instantiate the pipeline
+label_embeddings = torch.vstack(
+    [torch.randn(1, 16) - 3, torch.randn(1, 16) + 3]
+)
+pipeline = EmbeddingPipeline(
+    label_embeddings, label_names=["negative", "positive"]
 )
 
-# Define your label embeddings
-label_embeddings = torch.vstack([torch.randn(1, 16), torch.randn(1, 16) + 2])
-
-# Define your truth labels
-truths = [0] * 100 + [1] * 100
-
-# Instantiate the pipeline
-pipeline = EmbeddingPipeline(label_embeddings)
-
 # Zero-shot prediction
-preds = pipeline.predict(input_embeddings, batch_size=8)
+test_embeddings = torch.vstack(
+    [torch.randn(2, 16) - 3, torch.randn(2, 16) + 3]
+)
+preds = pipeline.predict(test_embeddings, batch_size=8)
 
 # Label-tuning training
-training_output = pipeline.fit(input_embeddings, truths)
+training_embeddings = torch.vstack(
+    [torch.randn(5, 16) - 3, torch.randn(5, 16) + 3]
+)
+training_truths = ["negative"] * 5 + ["positive"] * 5
+training_output = pipeline.fit(
+    training_embeddings, training_truths, do_cv=False
+)
 
-# Prediction after training
-preds = pipeline.predict(input_embeddings, batch_size=8)
+# Predict after training
+preds = pipeline.predict(test_embeddings, batch_size=8)
+
+# Calibrate the probabilities with held-out data
+calibration_embeddings = torch.vstack(
+    [torch.randn(5, 16) - 3, torch.randn(5, 16) + 3]
+)
+calibration_truths = ["negative"] * 5 + ["positive"] * 5
+calibrator = pipeline.calibrate(
+    calibration_embeddings, calibration_truths, method="beta"
+)
+
+# Predict after calibration
+preds = pipeline.predict(test_embeddings, batch_size=8)
+
+# Evaluate
+test_truths = ["negative"] * 2 + ["positive"] * 2
+results = pipeline.evaluate(test_embeddings, test_truths, batch_size=8)
+
+# Save the pipeline
+pipeline.save("checkpoints/my-embedding-model")
+
+# Load the pipeline and predict again
+pipeline = EmbeddingPipeline.load("checkpoints/my-embedding-model")
+preds = pipeline.predict(test_embeddings, batch_size=8)
 ```
-
-# 🎯 Calibration
-
-Probabilities from label tuning (and especially from zero-shot) are often over- or under-confident. `calibrate` fits a post-hoc calibrator on held-out data, and then `predict` and `evaluate` return calibrated probabilities. Use data that was not used in `fit`.
-
-```python
-pipeline.fit(train_embeddings, train_truths)
-
-# Fit a calibrator on held-out data (`method` is one of `delt.calibrators.REGISTRY`)
-pipeline.calibrate(val_embeddings, val_truths, method="beta")
-
-# Calibrated probabilities
-preds = pipeline.predict(test_embeddings)
-```
-
-Available methods:
-- `beta`: [beta calibration](https://proceedings.mlr.press/v54/kull17a.html), a monotonic map per label (one-vs-rest) followed by a normalization, so the label with max prob may change after calibration.
-
-`evaluate` reports the expected calibration error (`ece`, 15 equal-width bins over the max prob), so you can check the effect of calibrating on held-out data that was used neither in `fit` nor in `calibrate`.
-
-The calibrator is saved and loaded with the pipeline. Calling `fit` again discards it, since the probabilities change. It is available in all the pipelines except `SpanPipeline`.
-
-# 📦 Deploying a label tuned model
-
-A trained pipeline can be saved to a directory with `save`, and restored with `load`. Only the label embeddings are saved, so the artifact is tiny and works with any precomputed embeddings from the same encoder.
-
-```python
-pipeline.fit(input_embeddings, truths)
-
-# Optionally, measure the performance on held-out data, so it is saved with the model
-# (`fit(..., do_cv=True)` also saves the cross-validation performance)
-metrics = pipeline.evaluate(val_embeddings, val_truths)
-
-pipeline.save("my_model")
-
-pipeline = EmbeddingPipeline.load("my_model")
-```
-
-The directory contains:
-- `label_embeddings.safetensors`: the `label_embeddings` and `logit_scale` tensors, loadable with `safetensors.torch.load_file`.
-- `model.json`: the label names, the training information (hyperparameters, number of samples, training time, loss), the validation performance (accuracy, expected calibration error, macro/weighted F1 and metrics per label), the calibrator (if `calibrate` was used), and, for `EncoderPipeline`s, the encoder information needed to rebuild it.
-
-`SpanPipeline` supports `evaluate`, `save` and `load` too. Its `evaluate` takes the gold spans of each text and reports exact-match (offsets and label) precision, recall and F1, micro and per label. In the saved model, `label_embeddings` has one more row than `label_names`, which is the "none" class at the end, and the span settings (`max_span_width`, `negative_ratio`, `seed`, and the "none" verbalization) are kept in `model.json`.
 
 # 🧩 Span detection and classification
+`delt` supports span detection and classification such as NER or aspect-based sentiment analysis by computing similarities between templated label verbalizations and spans of fixed width. Each text is encoded once, and each candidate is embedded as the mean of its contextual token embeddings and classified against the label embeddings, plus a trainable "none" class for candidates that are not spans of interest. Predicted spans never overlap.
 
-`SpanPipeline` extends text label tuning to span tasks such as NER or aspect-based sentiment analysis. Rather than BIO tagging, which would add `B-`/`I-` noise to the label embeddings, every contiguous span of up to `max_span_width` words is a candidate. Each text is encoded once, and each candidate is embedded as the mean of its contextual token embeddings and classified against the label embeddings, plus a trainable "none" class for candidates that are not spans of interest. Predicted spans never overlap. See the [span example](examples/pipelines/span.py).
+Training is essential for achieving good performance on span classification tasks, as most embedding models are not designed to produce meaningful token embeddings at specific positions without fine-tuning.
 
 ```python
 from delt import SpanPipeline
-from delt.pipelines.text import SpanAnnotation
+from delt.pipelines.text import PredictedSpan, SpanAnnotation
 
+# Define some helper functions
+def show_outputs(texts: list[str], preds: list[list[PredictedSpan]]):
+    """Print the predicted spans for each text."""
+    for text, spans in zip(texts, preds, strict=True):
+        print(
+            text,
+            [(s.text, s.label, round(s.score, 2)) for s in spans],
+        )
+
+def annotate(texts: list[str], gold: list[list[tuple[str, str]]]):
+    """Convert (phrase, label) pairs into span annotations."""
+
+    def annotate_span(text: str, phrase: str, label: str) -> SpanAnnotation:
+        start = text.index(phrase)
+        return SpanAnnotation(start, start + len(phrase), label)
+
+    return [
+        [annotate_span(text, phrase, label) for phrase, label in spans]
+        for text, spans in zip(texts, gold, strict=True)
+    ]
+
+# Instantiate the pipeline
+label_verbalizations = {
+    "person": "a person's name",
+    "location": "a city, country or place",
+    "organization": "a company or organization name",
+}
+prompt_template = "This is {}"
+encoder_class = "sentence-transformer"
+encoder_name = "sentence-transformers/all-MiniLM-L6-v2"
 pipeline = SpanPipeline(
-    "sentence-transformers/all-MiniLM-L6-v2",
-    "sentence-transformer",
-    {"person": "a person name", "location": "a place name"},
-    "This is {}",
+    encoder_name,
+    encoder_class,
+    label_verbalizations,
+    prompt_template,
+    max_span_width=8,
+    negative_ratio=3,
 )
-# `truths` has one list of `SpanAnnotation(start, end, label)` per text (character offsets, `end` exclusive)
-pipeline.fit(texts, truths)
-spans = pipeline.predict(texts, threshold=0.5)  # list[list[PredictedSpan]]
+
+# Zero-shot prediction
+test_texts = [
+    "Laura works for IBM in Dublin.",
+    "Nokia opened a lab in Helsinki.",
+]
+preds = pipeline.predict(test_texts, batch_size=8, threshold=0.8)
+show_outputs(test_texts, preds)
+
+# Label-tuning training
+train_texts = [
+    "Alice visited Paris last summer.",
+    "Bob moved to Berlin in March.",
+    "Carol flew from Madrid to Rome.",
+    "David lives in London with Eve.",
+    "TransPerfect is located in Barcelona and it's aimed to translation and regionalization.",
+    "Google hired Maria to work on search in Zurich.",
+]
+train_annotated_spans = [
+    [("Alice", "person"), ("Paris", "location")],
+    [("Bob", "person"), ("Berlin", "location")],
+    [("Carol", "person"), ("Madrid", "location"), ("Rome", "location")],
+    [("David", "person"), ("London", "location"), ("Eve", "person")],
+    [("TransPerfect", "organization"), ("Barcelona", "location")],
+    [("Google", "organization"), ("Maria", "person"), ("Zurich", "location")],
+]
+train_truths = annotate(train_texts, train_annotated_spans)
+training_output = pipeline.fit(train_texts, train_truths)
+
+# Predict after training
+preds = pipeline.predict(test_texts, batch_size=8, threshold=0.8)
+show_outputs(test_texts, preds)
+
+# Evaluate
+test_annotated_spans = [
+    [("Laura", "person"), ("IBM", "organization"), ("Dublin", "location")],
+    [("Nokia", "organization"), ("Helsinki", "location")],
+]
+test_truths = annotate(test_texts, test_annotated_spans)
+results = pipeline.evaluate(
+    test_texts, test_truths, batch_size=8, threshold=0.8
+)
+
+# Save the pipeline
+pipeline.save("checkpoints/my-span-model")
+
+# Load the pipeline and predict again
+pipeline = SpanPipeline.load("checkpoints/my-span-model")
+preds = pipeline.predict(test_texts, batch_size=8, threshold=0.8)
+show_outputs(test_texts, preds)
 ```
 
-
-# 🧪 Distillation example
+# 🧪 Distillation
 
 Instead of manually annotating thousands of examples, a stronger model can act as a **teacher**, while `delt` learns a lightweight **student**.
 
-Both **soft** and **hard** distillation are supported by `delt` for every modality, including text span classification. You can take a look to the [soft distillation](src/delt/examples/soft_distillation/) and [hard distillation](src/delt/examples/hard_distillation/) folders to see how it works. Here we show an example to distill `gpt-5.4-nano` into label embeddings for a sentiment analysis task:
+Both **soft** and **hard** distillation are supported by `delt` for every modality, including text span classification. You can take a look to the [soft distillation](examples/soft_distillation/) and [hard distillation](examples/hard_distillation/) folders to see how it works. 
+
+## 💪🧪 Hard distillation
+In hard distillation, the teacher model outputs labels without probabilities. `delt` can use these labels as silver labels to train a student model. Here we show an example to distill `gpt-5.4-nano` into label embeddings for a sentiment analysis task (hard-distillation):
 
 ```python
 from delt.pipelines import TextPipeline
@@ -247,11 +334,11 @@ from delt.teachers import LLMTextTeacher
 texts = ["I hate you", "I love you"]
 label_set = ["positive", "negative"]
 
-# Instante the teacher model
+# Instantiate the teacher model
 teacher = LLMTextTeacher(
     "gpt-5.4-nano",
     {"temperature": 0},
-    "Classify the following texts into positive or negative for a sentiment analysis task.",
+    "Classify the following text into positive or negative for a sentiment analysis task.",
 )
 
 # Generate the labels (`predict`) or probs (`predict_proba`)
@@ -282,6 +369,77 @@ training_output = pipeline.fit(texts, truths)
 # Prediction after training
 preds = pipeline.predict(texts, batch_size=8)
 ```
+
+## 🪶🧪 Soft distillation
+In soft distillation, the teacher is required to compute probabilities. Although these probabilities cannot be extracted from many high-performing closed-source models, some may still be suitable for soft distillation (e.g., Jev), alongside open-source models available on Hugging Face, provided that they achieve reasonably good performance on our downstream task.
+
+Those teachers in `delt` whose `predict_proba` returns a not one-hot probability distribution can be used for soft distillation. The following example shows how to distill from Jev's probabilities.
+
+```python
+import os
+from delt.pipelines import TextPipeline
+from delt.teachers import JevTextTeacher
+
+# Define your input data and label set
+texts = ["I hate you", "I love you"]
+label_set = ["positive", "negative"]
+
+# Instantiate the teacher model (through OpenRouter, although any provider is supported)
+teacher = JevTextTeacher(
+    "jev-latest",
+    "What is the sentiment of this text?",
+    "User text: {}",
+    base_url="https://openrouter.ai/api",
+    api_key=os.environ["OPENROUTER_API_KEY"],
+)
+
+# Generate the labels (`predict`) or probs (`predict_proba`)
+truth_probas = teacher.predict_proba(texts, label_set)
+
+# Create the label verbalizations (same order as the label set)
+label_verbalizations = {
+    "positive": "really positive",
+    "negative": "really negative",
+}
+
+# Instantiate the pipeline
+prompt_template = "This text is {}"
+encoder_class = "sentence-transformer"
+encoder_name = "sentence-transformers/all-MiniLM-L6-v2"
+pipeline = TextPipeline(
+    encoder_name, encoder_class, label_verbalizations, prompt_template
+)
+
+# Zero-shot prediction
+preds = pipeline.predict(texts, batch_size=8)
+
+# Label-tuning to train the student model
+training_output = pipeline.fit(texts, truth_probas)
+
+# Prediction after training
+preds = pipeline.predict(texts, batch_size=8)
+``` 
+
+# 📦 Deploying a label tuned model
+
+A trained pipeline can be saved to a directory with `save`, and restored with `load`. For instance:
+
+```python
+from delt import EmbeddingPipeline
+
+label_embeddings = torch.vstack(
+    [torch.randn(1, 16) - 3, torch.randn(1, 16) + 3]
+)
+pipeline = EmbeddingPipeline(
+    label_embeddings, label_names=["negative", "positive"]
+)
+pipeline.save("my_model")
+pipeline = EmbeddingPipeline.load("my_model")
+```
+
+The output directory contains:
+- `label_embeddings.safetensors`: the `label_embeddings` and `logit_scale` tensors, loadable with `safetensors.torch.load_file`.
+- `model.json`: the label names, the training information (hyperparameters, number of samples, training time, loss), the validation performance (accuracy, expected calibration error, macro/weighted F1 and metrics per label), the calibrator (if `calibrate` was used), and, any other information required to rebuild the pipeline. 
 
 # 🖥 User Interface
 
