@@ -83,7 +83,7 @@ This approach enables knowledge from highly capable models to be compressed into
 Every modality follows exactly the same workflow, so learning one modality means learning them all:
 
 <p align="center">
-  <img src="assets/pipeline.png" alt="Pipeline" width="500"><br>
+  <img src="https://raw.githubusercontent.com/jogonba2/delt/refs/heads/main/assets/pipeline.png" alt="Pipeline" width="500"><br>
   <strong>Figure 2.</strong> A pipeline in delt works in the same way for every modality.
 </p>
 
