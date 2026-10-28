@@ -71,10 +71,13 @@ class SiglipEncoder(ImageEncoder):
             desc="Encoding texts...",
             total=(len(texts) + batch_size - 1) // batch_size,
         ):
+            # SigLip is trained with texts padded to its maximum length, and
+            # its text embeddings are wrong with dynamic padding
             features = self.processor(
                 text=batch,
                 truncation=True,
-                padding=True,
+                padding="max_length",
+                max_length=self.encoder.config.text_config.max_position_embeddings,
                 return_tensors="pt",
             ).to(self.encoder.device)
 

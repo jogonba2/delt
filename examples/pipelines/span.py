@@ -10,14 +10,11 @@ def show_outputs(texts: list[str], preds: list[list[PredictedSpan]]):
     for text, spans in zip(texts, preds, strict=True):
         print(
             text,
-            [
-                (s.text, pipeline.label_names[s.label], round(s.score, 2))
-                for s in spans
-            ],
+            [(s.text, s.label, round(s.score, 2)) for s in spans],
         )
 
 
-def annotate(gold: list[list[tuple[str, str]]]):
+def annotate(texts: list[str], gold: list[list[tuple[str, str]]]):
     """Convert (phrase, label) pairs into span annotations."""
 
     def annotate_span(text: str, phrase: str, label: str) -> SpanAnnotation:
@@ -30,46 +27,16 @@ def annotate(gold: list[list[tuple[str, str]]]):
     ]
 
 
-# Define your annotated data and label set
-texts = [
-    "Alice visited Paris last summer.",
-    "Bob moved to Berlin in March.",
-    "Carol flew from Madrid to Rome.",
-    "David lives in London with Eve.",
-    "TransPerfect is located in Barcelona and it's aimed to translation and regionalization.",
-    "Google hired Maria to work on search in Zurich.",
-    "Microsoft released a new version of Windows last week.",
-    "The engineers at Siemens met John in Munich.",
-    "Amazon opened an office in Tokyo, and Sarah joined the AI team.",
-    "The package was shipped by Tesla to Peter in Oslo.",
-]
-gold = [
-    [("Alice", "person"), ("Paris", "location")],
-    [("Bob", "person"), ("Berlin", "location")],
-    [("Carol", "person"), ("Madrid", "location"), ("Rome", "location")],
-    [("David", "person"), ("London", "location"), ("Eve", "person")],
-    [("TransPerfect", "organization"), ("Barcelona", "location")],
-    [("Google", "organization"), ("Maria", "person"), ("Zurich", "location")],
-    [("Microsoft", "organization")],
-    [("Siemens", "organization"), ("John", "person"), ("Munich", "location")],
-    [("Amazon", "organization"), ("Tokyo", "location"), ("Sarah", "person")],
-    [("Tesla", "organization"), ("Peter", "person"), ("Oslo", "location")],
-]
+# Instantiate the pipeline
 label_verbalizations = {
     "person": "a person's name",
     "location": "a city, country or place",
     "organization": "a company or organization name",
 }
-
-# Annotate the input data
-truths = annotate(gold)
-
-# Set the encoder
 prompt_template = "This is {}"
 encoder_class = "sentence-transformer"
 encoder_name = "sentence-transformers/all-MiniLM-L6-v2"
 
-# Instantiate the pipeline
 pipeline = SpanPipeline(
     encoder_name,
     encoder_class,
@@ -80,12 +47,51 @@ pipeline = SpanPipeline(
 )
 
 # Zero-shot prediction
-preds = pipeline.predict(texts, batch_size=8)
-show_outputs(texts, preds)
+test_texts = [
+    "Laura works for IBM in Dublin.",
+    "Nokia opened a lab in Helsinki.",
+]
+preds = pipeline.predict(test_texts, batch_size=8, threshold=0.8)
+show_outputs(test_texts, preds)
 
 # Label-tuning training
-training_output = pipeline.fit(texts, truths)
+train_texts = [
+    "Alice visited Paris last summer.",
+    "Bob moved to Berlin in March.",
+    "Carol flew from Madrid to Rome.",
+    "David lives in London with Eve.",
+    "TransPerfect is located in Barcelona and it's aimed to translation and regionalization.",
+    "Google hired Maria to work on search in Zurich.",
+]
+train_annotated_spans = [
+    [("Alice", "person"), ("Paris", "location")],
+    [("Bob", "person"), ("Berlin", "location")],
+    [("Carol", "person"), ("Madrid", "location"), ("Rome", "location")],
+    [("David", "person"), ("London", "location"), ("Eve", "person")],
+    [("TransPerfect", "organization"), ("Barcelona", "location")],
+    [("Google", "organization"), ("Maria", "person"), ("Zurich", "location")],
+]
+train_truths = annotate(train_texts, train_annotated_spans)
+training_output = pipeline.fit(train_texts, train_truths)
 
-# Prediction after training
-preds = pipeline.predict(texts, batch_size=8, threshold=0.8)
-show_outputs(texts, preds)
+# Predict after training
+preds = pipeline.predict(test_texts, batch_size=8, threshold=0.8)
+show_outputs(test_texts, preds)
+
+# Evaluate
+test_annotated_spans = [
+    [("Laura", "person"), ("IBM", "organization"), ("Dublin", "location")],
+    [("Nokia", "organization"), ("Helsinki", "location")],
+]
+test_truths = annotate(test_texts, test_annotated_spans)
+results = pipeline.evaluate(
+    test_texts, test_truths, batch_size=8, threshold=0.8
+)
+
+# Save the pipeline
+pipeline.save("checkpoints/my-span-model")
+
+# Load the pipeline and predict again
+pipeline = SpanPipeline.load("checkpoints/my-span-model")
+preds = pipeline.predict(test_texts, batch_size=8, threshold=0.8)
+show_outputs(test_texts, preds)

@@ -7,6 +7,7 @@ from delt.common.iterables import (
     batchify_tensor,
     dict_cartesian_product,
 )
+from delt.common.labels import labels_to_indices
 from delt.common.logging import get_logger
 from delt.common.prompting import format_prompt, make_output_model
 
@@ -17,6 +18,7 @@ __all__ = [
     "dict_cartesian_product",
     "format_prompt",
     "get_logger",
+    "labels_to_indices",
     "make_output_model",
     "unimodal_kfold",
 ]

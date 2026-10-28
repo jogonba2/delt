@@ -2,27 +2,42 @@
 
 from delt import TextPipeline
 
-# Set your data and configure the encoder
-texts = ["I'm happy", "I'm sad", "You're strong", "I hate you."]
+# Instantiate the pipeline
 label_verbalizations = {
     "positive": "really positive",
     "negative": "really negative",
 }
-truths = [0, 1, 0, 1]
 prompt_template = "This text is {}"
 encoder_class = "sentence-transformer"
 encoder_name = "sentence-transformers/all-MiniLM-L6-v2"
-
-# Instantiate the pipeline
 pipeline = TextPipeline(
     encoder_name, encoder_class, label_verbalizations, prompt_template
 )
 
 # Zero-shot prediction
-preds = pipeline.predict(texts, batch_size=8)
+test_texts = ["I don't like you"]
+preds = pipeline.predict(test_texts, batch_size=8)
 
 # Label-tuning training
-training_output = pipeline.fit(texts, truths)
+training_texts = ["I'm happy", "I'm sad", "You're strong", "I hate you."]
+training_truths = ["positive", "negative", "positive", "negative"]
+training_output = pipeline.fit(training_texts, training_truths)
 
-# Prediction after training
-preds = pipeline.predict(texts, batch_size=8)
+# Calibrate
+calibration_texts = ["You are soooo good", "You are soooo bad"]
+calibration_truths = ["positive", "negative"]
+calibrator = pipeline.calibrate(calibration_texts, calibration_truths)
+
+# Predict after training
+preds = pipeline.predict(test_texts, batch_size=8)
+
+# Evaluate
+test_truths = ["negative"]
+results = pipeline.evaluate(test_texts, test_truths, batch_size=8)
+
+# Save the pipeline
+pipeline.save("checkpoints/my-text-model")
+
+# Load the pipeline and predict again
+pipeline = TextPipeline.load("checkpoints/my-text-model")
+preds = pipeline.predict(test_texts, batch_size=8)

@@ -108,3 +108,69 @@ def select_spans(
         ):
             selected.append(i)
     return sorted(selected, key=lambda i: candidates[i])
+
+
+def _precision_recall_f1(
+    true_positives: int, false_positives: int, false_negatives: int
+) -> dict[str, float]:
+    """Compute precision, recall and F1 from counts, with 0 for undefined values."""
+    predicted = true_positives + false_positives
+    gold = true_positives + false_negatives
+    precision = true_positives / predicted if predicted else 0.0
+    recall = true_positives / gold if gold else 0.0
+    f1 = (
+        2 * precision * recall / (precision + recall)
+        if precision + recall
+        else 0.0
+    )
+    return {"precision": precision, "recall": recall, "f1": f1}
+
+
+def span_metrics(
+    predicted: list[set[tuple[int, int, str]]],
+    gold: list[set[tuple[int, int, str]]],
+    label_names: list[str],
+) -> dict:
+    """
+    Compute exact-match precision, recall and F1 of predicted spans.
+
+    A predicted span is correct only if its offsets and label are the same as those of a gold span.
+
+    Args:
+        predicted (list[set[tuple[int, int, str]]]): (start, end, label name) of the predicted spans of each text.
+        gold (list[set[tuple[int, int, str]]]): (start, end, label name) of the gold spans of each text.
+        label_names (list[str]): names of the labels.
+
+    Returns:
+        dict: number of texts, micro precision, recall and F1 (`micro`), macro F1 over the labels that are gold or predicted at least once (`macro_f1`), and precision, recall, F1 and support (number of gold spans) per label (`per_label`).
+
+    """
+    counts = {name: [0, 0, 0] for name in label_names}  # tp, fp, fn
+    for predicted_spans, gold_spans in zip(predicted, gold, strict=True):
+        for span in predicted_spans:
+            counts[span[2]][0 if span in gold_spans else 1] += 1
+        for span in gold_spans - predicted_spans:
+            counts[span[2]][2] += 1
+
+    per_label = {
+        name: {
+            **_precision_recall_f1(*label_counts),
+            "support": label_counts[0] + label_counts[2],
+        }
+        for name, label_counts in counts.items()
+    }
+    present = [
+        per_label[name]["f1"]
+        for name, label_counts in counts.items()
+        if label_counts[0] + label_counts[1] + label_counts[2]
+    ]
+    totals = [
+        sum(label_counts[i] for label_counts in counts.values())
+        for i in range(3)
+    ]
+    return {
+        "num_samples": len(gold),
+        "micro": _precision_recall_f1(*totals),
+        "macro_f1": sum(present) / len(present) if present else 0.0,
+        "per_label": per_label,
+    }

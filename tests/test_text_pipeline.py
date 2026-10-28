@@ -2,6 +2,7 @@
 
 import random
 
+import numpy as np
 import pytest
 import torch
 
@@ -26,7 +27,14 @@ def text_dataset():
         "Amazing, I would watch it again!",
         "Awful, boring, and a complete waste of time.",
     ]
-    truths = [0, 1, 0, 1, 0, 1]
+    truths = [
+        "positive",
+        "negative",
+        "positive",
+        "negative",
+        "positive",
+        "negative",
+    ]
     return texts, truths
 
 
@@ -53,14 +61,9 @@ class TestTextPipeline:
     def test_label_tuning_improves_zero_shot(self, text_dataset):
         """Check whether label tuning improves or matches zero-shot performance."""
         texts, truths = text_dataset
-        zs_preds = torch.as_tensor(
-            [pred.label for pred in self.pipeline.predict(texts)]
-        )
+        zs_preds = [pred.label for pred in self.pipeline.predict(texts)]
         self.pipeline.fit(texts, truths)
-        lt_preds = torch.as_tensor(
-            [pred.label for pred in self.pipeline.predict(texts)]
-        )
-        truths = torch.as_tensor(truths)
-        zs_accuracy = (zs_preds == truths).float().mean().item()
-        lt_accuracy = (lt_preds == truths).float().mean().item()
+        lt_preds = [pred.label for pred in self.pipeline.predict(texts)]
+        zs_accuracy = np.mean([p == t for p, t in zip(zs_preds, truths)])
+        lt_accuracy = np.mean([p == t for p, t in zip(lt_preds, truths)])
         assert lt_accuracy >= zs_accuracy

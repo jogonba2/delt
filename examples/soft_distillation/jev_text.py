@@ -49,4 +49,3 @@ training_output = pipeline.fit(texts, truth_probas)
 
 # Prediction after training
 preds = pipeline.predict(texts, batch_size=8)
-print(preds)

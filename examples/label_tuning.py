@@ -17,7 +17,7 @@ label_embeddings = torch.vstack([torch.randn(1, 16), torch.randn(1, 16) + 2])
 truths = [0] * 100 + [1] * 100
 
 # Zero-shot prediction
-preds = predict(input_embeddings, label_embeddings, torch.tensor([1.0]))
+preds = predict(input_embeddings, label_embeddings)
 
 # Train the label embeddings
 training_output = label_tuning(

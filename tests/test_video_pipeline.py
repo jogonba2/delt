@@ -2,6 +2,7 @@
 
 import random
 
+import numpy as np
 import pytest
 import requests
 import torch
@@ -38,7 +39,7 @@ def video_dataset():
             "1/DFDC_Dataset/Real/ykofirxynw.mp4"
         ),
     ]
-    truths = [0, 1]
+    truths = ["fake", "real"]
     return videos, truths
 
 
@@ -65,14 +66,9 @@ class TestVideoPipeline:
     def test_label_tuning_improves_zero_shot(self, video_dataset):
         """Check whether label tuning improves or matches zero-shot performance."""
         videos, truths = video_dataset
-        zs_preds = torch.as_tensor(
-            [pred.label for pred in self.pipeline.predict(videos)]
-        )
+        zs_preds = [pred.label for pred in self.pipeline.predict(videos)]
         self.pipeline.fit(videos, truths)
-        lt_preds = torch.as_tensor(
-            [pred.label for pred in self.pipeline.predict(videos)]
-        )
-        truths = torch.as_tensor(truths)
-        zs_accuracy = (zs_preds == truths).float().mean().item()
-        lt_accuracy = (lt_preds == truths).float().mean().item()
+        lt_preds = [pred.label for pred in self.pipeline.predict(videos)]
+        zs_accuracy = np.mean([p == t for p, t in zip(zs_preds, truths)])
+        lt_accuracy = np.mean([p == t for p, t in zip(lt_preds, truths)])
         assert lt_accuracy >= zs_accuracy

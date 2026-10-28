@@ -1,6 +1,5 @@
 """Module for label tuning training."""
 
-from collections import Counter
 from time import time
 
 import numpy as np
@@ -12,7 +11,7 @@ from tqdm import tqdm
 
 from delt.common import dict_cartesian_product, unimodal_kfold
 from delt.predict import predict
-from delt.types import TrainingOutput
+from delt.types import DEFAULT_LOGIT_SCALE, MAX_LOGIT_SCALE, TrainingOutput
 
 GRID_SEARCH_PARAMS = {
     "learning_rate": [1e-2, 1e-1],
@@ -79,15 +78,18 @@ def label_tuning(
 
     # Move everything to the same device
     truths = truths.to(input_embeddings.device)
-    label_embeddings = label_embeddings.to(input_embeddings.device)
+
+    # Normalize the initial label embeddings, as the tuned ones are,
+    # so the drift loss only measures how much they moved
+    label_embeddings = F.normalize(
+        label_embeddings.to(input_embeddings.device), p=2, dim=1
+    )
 
     # Prepare parameters to train
     trainable_label_embeddings = nn.Parameter(
         label_embeddings.clone(), requires_grad=True
     )
-    logit_scale = nn.Parameter(
-        torch.ones([]) * torch.log(torch.tensor(1 / 0.07))
-    )
+    logit_scale = nn.Parameter(torch.tensor(DEFAULT_LOGIT_SCALE))
 
     # Instantiate optimizer and loss
     optimizer = torch.optim.AdamW(
@@ -134,13 +136,19 @@ def label_tuning(
         optimizer.step()
         optimizer.zero_grad()
 
+        with torch.no_grad():
+            logit_scale.clamp_(0, MAX_LOGIT_SCALE)
+
         pbar.set_postfix(
             loss=f"{total_loss.item():.4f}",
             cls=f"{classification_loss.item():.4f}",
             drift=f"{drift_loss.item():.4f}",
         )
     end_time = time()
-    label_embeddings = norm_label_embeddings.detach()
+
+    label_embeddings = F.normalize(
+        trainable_label_embeddings.detach(), p=2, dim=1
+    )
     logit_scale = logit_scale.detach()
 
     return TrainingOutput(
@@ -156,6 +164,7 @@ def label_tuning(
             "dropout": dropout,
             "drift_coefficient": drift_coefficient,
         },
+        num_train_samples=len(truths),
     )
 
 
@@ -180,8 +189,12 @@ def label_tuning_cv(
         TrainingOutput: containing the tuned label embeddings (N, d), logit scale (1,), training time, and other outputs for monitoring training.
 
     """
+    if isinstance(truths, list):
+        truths = torch.tensor(truths)
+
     n_samples = len(truths)
-    min_class_size = min(Counter(truths.tolist()).values())
+    _, counts = torch.unique(truths, return_counts=True)
+    min_class_size = counts.min().item()
     n_splits = min(num_splits, n_samples, min_class_size)
 
     if n_splits < 2:
@@ -195,7 +208,7 @@ def label_tuning_cv(
         input_embeddings, truths, n_splits=n_splits
     )
 
-    best_params, best_score = None, -1
+    best_params, best_score, best_scores = None, -1, []
 
     pbar = tqdm(hyperparams, desc="Hyperparameter search")
 
@@ -227,12 +240,18 @@ def label_tuning_cv(
 
         if score > best_score:
             best_score = score
+            best_scores = scores
             best_params = experiment_params
 
-    print("\nBest macro F1:", best_score)
-    print("Best params:", best_params)
-
     # Train final model with best params
-    return label_tuning(
+    output = label_tuning(
         input_embeddings, label_embeddings, truths, **best_params
     )
+    output.validation = {
+        "method": "cross_validation",
+        "num_splits": n_splits,
+        "macro_f1": best_score,
+        "macro_f1_std": float(np.std(best_scores)),
+        "macro_f1_per_fold": [float(score) for score in best_scores],
+    }
+    return output
