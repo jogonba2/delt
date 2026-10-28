@@ -1,5 +1,6 @@
 """Main package of delt."""
 
+from delt.calibrators import BetaCalibrator, Calibrator, get_calibrator
 from delt.encoders import (
     ClapEncoder,
     ClipEncoder,
@@ -29,6 +30,10 @@ from delt.teachers import (
 __all__ = [
     # Pipelines
     "AudioPipeline",
+    # Calibrators
+    "BetaCalibrator",
+    "Calibrator",
+    "get_calibrator",
     # Encoders
     "ClapEncoder",
     "ClipEncoder",

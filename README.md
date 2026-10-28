@@ -170,6 +170,27 @@ training_output = pipeline.fit(input_embeddings, truths)
 preds = pipeline.predict(input_embeddings, batch_size=8)
 ```
 
+# 🎯 Calibration
+
+Probabilities from label tuning (and especially from zero-shot) are often over- or under-confident. `calibrate` fits a post-hoc calibrator on held-out data, and then `predict` and `evaluate` return calibrated probabilities. Use data that was not used in `fit`.
+
+```python
+pipeline.fit(train_embeddings, train_truths)
+
+# Fit a calibrator on held-out data (`method` is one of `delt.calibrators.REGISTRY`)
+pipeline.calibrate(val_embeddings, val_truths, method="beta")
+
+# Calibrated probabilities
+preds = pipeline.predict(test_embeddings)
+```
+
+Available methods:
+- `beta`: [beta calibration](https://proceedings.mlr.press/v54/kull17a.html), a monotonic map per label (one-vs-rest) followed by a normalization, so the label with max prob may change after calibration.
+
+`evaluate` reports the expected calibration error (`ece`, 15 equal-width bins over the max prob), so you can check the effect of calibrating on held-out data that was used neither in `fit` nor in `calibrate`.
+
+The calibrator is saved and loaded with the pipeline. Calling `fit` again discards it, since the probabilities change. It is available in all the pipelines except `SpanPipeline`.
+
 # 📦 Deploying a label tuned model
 
 A trained pipeline can be saved to a directory with `save`, and restored with `load`. Only the label embeddings are saved, so the artifact is tiny and works with any precomputed embeddings from the same encoder.
@@ -188,7 +209,7 @@ pipeline = EmbeddingPipeline.load("my_model")
 
 The directory contains:
 - `label_embeddings.safetensors`: the `label_embeddings` and `logit_scale` tensors, loadable with `safetensors.torch.load_file`.
-- `model.json`: the label names, the training information (hyperparameters, number of samples, training time, loss), the validation performance (accuracy, macro/weighted F1 and metrics per label), and, for `EncoderPipeline`s, the encoder information needed to rebuild it.
+- `model.json`: the label names, the training information (hyperparameters, number of samples, training time, loss), the validation performance (accuracy, expected calibration error, macro/weighted F1 and metrics per label), the calibrator (if `calibrate` was used), and, for `EncoderPipeline`s, the encoder information needed to rebuild it.
 
 `SpanPipeline` supports `evaluate`, `save` and `load` too. Its `evaluate` takes the gold spans of each text and reports exact-match (offsets and label) precision, recall and F1, micro and per label. In the saved model, `label_embeddings` has one more row than `label_names`, which is the "none" class at the end, and the span settings (`max_span_width`, `negative_ratio`, `seed`, and the "none" verbalization) are kept in `model.json`.
 

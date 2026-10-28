@@ -1,9 +1,11 @@
 """Module for span pipelines."""
 
 import random
+from typing import Any
 
 import torch
 
+from delt.calibrators import Calibrator
 from delt.pipelines.base import EmbeddingPipeline
 from delt.pipelines.text.span.types import PredictedSpan, SpanAnnotation
 from delt.pipelines.text.span.utils import (
@@ -192,6 +194,17 @@ class SpanPipeline(TextPipeline):
             ]
         )
         return EmbeddingPipeline.fit(self, embeddings, labels, training_args)
+
+    def calibrate(self, *args: Any, **kwargs: Any) -> Calibrator:
+        """
+        Not supported yet, since candidates are dominated by the "none" class and their scores combine several probabilities.
+
+        Raises:
+            NotImplementedError: always.
+
+        """
+        msg = "Calibration is not supported yet for `SpanPipeline`."
+        raise NotImplementedError(msg)
 
     def predict(
         self,

@@ -56,7 +56,7 @@ def test_initial_embeddings_are_normalized(separable):
 
 def test_logit_scale_stays_in_range(separable):
     """Check that a large learning rate does not drive the scale out of range."""
-    from delt.predict import MAX_LOGIT_SCALE
+    from delt.types import MAX_LOGIT_SCALE
 
     embeddings, labels, centers = separable
     output = label_tuning(

@@ -30,6 +30,18 @@ training_output = pipeline.fit(
 # Predict after training
 preds = pipeline.predict(test_embeddings, batch_size=8)
 
+# Calibrate the probabilities with held-out data
+calibration_embeddings = torch.vstack(
+    [torch.randn(5, 16) - 3, torch.randn(5, 16) + 3]
+)
+calibration_truths = ["negative"] * 5 + ["positive"] * 5
+calibrator = pipeline.calibrate(
+    calibration_embeddings, calibration_truths, method="beta"
+)
+
+# Predict after calibration
+preds = pipeline.predict(test_embeddings, batch_size=8)
+
 # Evaluate
 test_truths = ["negative"] * 2 + ["positive"] * 2
 results = pipeline.evaluate(test_embeddings, test_truths, batch_size=8)

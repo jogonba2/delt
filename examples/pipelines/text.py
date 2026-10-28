@@ -23,6 +23,11 @@ training_texts = ["I'm happy", "I'm sad", "You're strong", "I hate you."]
 training_truths = ["positive", "negative", "positive", "negative"]
 training_output = pipeline.fit(training_texts, training_truths)
 
+# Calibrate
+calibration_texts = ["You are soooo good", "You are soooo bad"]
+calibration_truths = ["positive", "negative"]
+calibrator = pipeline.calibrate(calibration_texts, calibration_truths)
+
 # Predict after training
 preds = pipeline.predict(test_texts, batch_size=8)
 

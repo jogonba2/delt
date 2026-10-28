@@ -9,10 +9,12 @@ from pathlib import Path
 import torch
 from safetensors.torch import load_file, save_file
 
+from delt.calibrators import Calibrator, get_calibrator, load_calibrator
+from delt.calibrators.utils import to_targets
 from delt.common import format_prompt, labels_to_indices
 from delt.encoders import get_encoder
 from delt.evaluate import evaluate as compute_metrics
-from delt.predict import predict
+from delt.predict import predict, predict_proba
 from delt.train import label_tuning, label_tuning_cv
 from delt.types import (
     DEFAULT_LOGIT_SCALE,
@@ -35,6 +37,14 @@ def _read_model(
     info = json.loads((path / INFO_FILENAME).read_text(encoding="utf-8"))
     tensors = load_file(path / EMBEDDINGS_FILENAME, device=device)
     return tensors, info
+
+
+def _read_calibrator(info: dict) -> Calibrator | None:
+    """Read the calibrator from the information of a model saved with `EmbeddingPipeline.save`, if any."""
+    calibrator = info.get("calibrator")
+    if calibrator is None:
+        return None
+    return load_calibrator(calibrator["method"], calibrator["state"])
 
 
 class EmbeddingPipeline(ABC):
@@ -78,6 +88,7 @@ class EmbeddingPipeline(ABC):
         )
         self.training_output: TrainingOutput | None = None
         self.validation: dict | None = None
+        self.calibrator: Calibrator | None = None
 
     def fit(
         self,
@@ -91,6 +102,7 @@ class EmbeddingPipeline(ABC):
 
         The tuned label embeddings and logit scale will be kept in the pipeline,
         so they are reused when doing inference with the same pipeline.
+        A calibrator fitted with `calibrate` is discarded, since it was fitted on the probabilities of the previous label embeddings.
 
         Args:
             input_embeddings (torch.Tensor | list): the embedded data with shape (N, d).
@@ -127,6 +139,43 @@ class EmbeddingPipeline(ABC):
         self.validation = output.validation
         return output
 
+    def calibrate(
+        self,
+        input_embeddings: torch.Tensor | list,
+        truths: torch.Tensor | list,
+        method: str = "beta",
+        batch_size: int = 16,
+    ) -> Calibrator:
+        """
+        Fit a post-hoc calibrator on held-out data.
+
+        The calibrator maps the probabilities of the pipeline to calibrated ones, and it is applied by `predict` and `evaluate`.
+        It is kept in the pipeline, so it is saved with `save`. It is replaced by the next call to `calibrate`, and discarded by `fit`.
+        Use data that was not used to train the label embeddings, otherwise the probabilities are overconfident and the calibrator will not generalize.
+
+        Args:
+            input_embeddings (torch.Tensor | list): the embedded data with shape (N, d).
+            truths (torch.Tensor | list): reference labels as integers (or label names, if `label_names` is set) with shape (N,) or expected probabilities with shape (N, classes).
+            method (str): calibration method, one of `delt.calibrators.REGISTRY`, e.g., `beta`.
+            batch_size (int): the batch size for inference.
+
+        Returns:
+            Calibrator: the fitted calibrator.
+
+        """
+        if isinstance(input_embeddings, list):
+            input_embeddings = torch.tensor(input_embeddings)
+        label_embeddings = torch.as_tensor(self.label_embeddings)
+
+        probs = predict_proba(
+            input_embeddings, label_embeddings, self.logit_scale, batch_size
+        )
+        targets = to_targets(
+            labels_to_indices(truths, self.label_names), probs.shape[-1]
+        )
+        self.calibrator = get_calibrator(method).fit(probs, targets)
+        return self.calibrator
+
     def evaluate(
         self,
         input_embeddings: torch.Tensor | list,
@@ -137,6 +186,7 @@ class EmbeddingPipeline(ABC):
         Compute the performance of the pipeline on held-out data.
 
         The metrics are kept in the pipeline, so they are saved with `save`. They are replaced by the next call to `evaluate` or `fit`.
+        If the pipeline is calibrated (see `calibrate`), the metrics are computed with the calibrated probabilities.
 
         Args:
             input_embeddings (torch.Tensor | list): the embedded data with shape (N, d).
@@ -144,7 +194,7 @@ class EmbeddingPipeline(ABC):
             batch_size (int): the batch size for inference.
 
         Returns:
-            dict: number of samples, accuracy, macro and weighted F1, and precision, recall, F1 and support per label.
+            dict: number of samples, accuracy, expected calibration error (`ece`), macro and weighted F1, and precision, recall, F1 and support per label.
 
         """
         metrics = compute_metrics(
@@ -154,6 +204,7 @@ class EmbeddingPipeline(ABC):
             truths,
             self.label_names,
             batch_size,
+            self.calibrator,
         )
         self.validation = {"method": "holdout", **metrics}
         return metrics
@@ -165,6 +216,8 @@ class EmbeddingPipeline(ABC):
     ) -> list[Prediction]:
         """
         Compute the max prob label and probs per label for each input.
+
+        If the pipeline is calibrated (see `calibrate`), the probs are calibrated.
 
         Args:
             input_embeddings (torch.Tensor | list): the embedded data with shape (N, d).
@@ -180,15 +233,16 @@ class EmbeddingPipeline(ABC):
             self.logit_scale,
             batch_size,
             self.label_names,
+            self.calibrator,
         )
 
     def save(self, path: str | Path) -> Path:
         """
-        Save the label embeddings, logit scale, label names, and training and validation information to a directory.
+        Save the label embeddings, logit scale, label names, calibrator, and training and validation information to a directory.
 
         The directory contains:
         - `label_embeddings.safetensors`: the `label_embeddings` (L, d) and `logit_scale` tensors, loadable with `safetensors.torch.load_file`.
-        - `model.json`: the label names, information about the training, the performance on validation data (holdout or cross-validation, see `evaluate` and `fit`), and the encoder used to build the embeddings.
+        - `model.json`: the label names, information about the training, the performance on validation data (holdout or cross-validation, see `evaluate` and `fit`), the calibrator fitted with `calibrate`, and the encoder used to build the embeddings.
 
         Information about training is only available if the pipeline was trained with `fit`, and validation performance if it was computed with `evaluate` or `fit(do_cv=True)`. Both correspond to the last call.
 
@@ -233,6 +287,12 @@ class EmbeddingPipeline(ABC):
             "embedding_dim": label_embeddings.shape[-1],
             "training": training,
             "validation": self.validation,
+            "calibrator": {
+                "method": self.calibrator.name,
+                "state": self.calibrator.get_state(),
+            }
+            if self.calibrator is not None
+            else None,
             "encoder": self._encoder_info(),
         }
 
@@ -272,15 +332,17 @@ class EmbeddingPipeline(ABC):
             device (str): device to load the label embeddings into.
 
         Returns:
-            EmbeddingPipeline: a pipeline with the saved label embeddings, logit scale, and label names.
+            EmbeddingPipeline: a pipeline with the saved label embeddings, logit scale, label names, and calibrator.
 
         """
         tensors, info = _read_model(path, device)
-        return cls(
+        pipeline = cls(
             tensors["label_embeddings"],
             tensors["logit_scale"],
             info["label_names"],
         )
+        pipeline.calibrator = _read_calibrator(info)
+        return pipeline
 
     @classmethod
     def load_from_prompts(
@@ -397,6 +459,35 @@ class EncoderPipeline(EmbeddingPipeline):
         embeddings = self.get_input_embeddings(data, embeddings_batch_size)
         return super().fit(embeddings, truths, training_args, do_cv)
 
+    def calibrate(
+        self,
+        data: list[str] | list[Image] | list[Audio] | list[Video],
+        truths: list[int] | list[str],
+        method: str = "beta",
+        batch_size: int = 16,
+        embeddings_batch_size: int = 16,
+    ) -> Calibrator:
+        """
+        Fit a post-hoc calibrator on held-out data.
+
+        The calibrator maps the probabilities of the pipeline to calibrated ones, and it is applied by `predict` and `evaluate`.
+        It is kept in the pipeline, so it is saved with `save`. It is replaced by the next call to `calibrate`, and discarded by `fit`.
+        Use data that was not used to train the label embeddings, otherwise the probabilities are overconfident and the calibrator will not generalize.
+
+        Args:
+            data (list[str] | list[Image] | list[Audio] | list[Video]): input data.
+            truths (list[int] | list[str]): reference labels as label names or integers (positions of the labels in `label_verbalizations`).
+            method (str): calibration method, one of `delt.calibrators.REGISTRY`, e.g., `beta`.
+            batch_size (int): the batch size for inference.
+            embeddings_batch_size (int): batch size to get embeddings from the encoder models.
+
+        Returns:
+            Calibrator: the fitted calibrator.
+
+        """
+        embeddings = self.get_input_embeddings(data, embeddings_batch_size)
+        return super().calibrate(embeddings, truths, method, batch_size)
+
     def evaluate(
         self,
         data: list[str] | list[Image] | list[Audio] | list[Video],
@@ -416,7 +507,7 @@ class EncoderPipeline(EmbeddingPipeline):
             embeddings_batch_size (int): batch size to get embeddings from the encoder models.
 
         Returns:
-            dict: number of samples, accuracy, macro and weighted F1, and precision, recall, F1 and support per label.
+            dict: number of samples, accuracy, expected calibration error (`ece`), macro and weighted F1, and precision, recall, F1 and support per label.
 
         """
         embeddings = self.get_input_embeddings(data, embeddings_batch_size)
@@ -463,7 +554,7 @@ class EncoderPipeline(EmbeddingPipeline):
             device (str): device to load the label embeddings into.
 
         Returns:
-            EncoderPipeline: a pipeline with the saved label embeddings, logit scale, and label names.
+            EncoderPipeline: a pipeline with the saved label embeddings, logit scale, label names, and calibrator.
 
         """
         tensors, info = _read_model(path, device)
@@ -471,4 +562,5 @@ class EncoderPipeline(EmbeddingPipeline):
         pipeline.label_embeddings = tensors["label_embeddings"]
         pipeline.logit_scale = tensors["logit_scale"]
         pipeline.label_names = info["label_names"]
+        pipeline.calibrator = _read_calibrator(info)
         return pipeline

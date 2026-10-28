@@ -5,7 +5,7 @@ import requests
 from delt import VideoPipeline
 
 
-# Define a helper function
+# Define a helper function to download videos
 def download_video(url: str) -> bytes:
     """Download a video from a direct HTTP(S) URL and return it as bytes."""
     response = requests.get(url, timeout=60)
@@ -53,6 +53,20 @@ train_videos = [
 ]
 train_truths = ["real", "fake"]
 training_output = pipeline.fit(train_videos, train_truths)
+
+# Calibrate
+calibrate_videos = [
+    download_video(
+        "https://huggingface.co/datasets/dfb-data/deep-fake-detection-cropped/"
+        "resolve/4850ffa259634a34ef92bb741d79baddc22cfb47/1/DFDC_Dataset/Fake/abvgbvoxco.mp4"
+    ),
+    download_video(
+        "https://huggingface.co/datasets/dfb-data/deep-fake-detection-cropped/"
+        "resolve/4850ffa259634a34ef92bb741d79baddc22cfb47/1/DFDC_Dataset/Real/wynotylpnm.mp4"
+    ),
+]
+calibrate_truths = ["fake", "real"]
+calibrator = pipeline.calibrate(calibrate_videos, calibrate_truths)
 
 # Prediction after training
 preds = pipeline.predict(test_videos, batch_size=8)

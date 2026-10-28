@@ -139,6 +139,12 @@ class TestSpanPipeline:
         with pytest.raises(NotImplementedError):
             self.pipeline.fit(texts, truths, do_cv=True)
 
+    def test_calibration_not_supported(self, span_dataset):
+        """Calibration is rejected."""
+        texts, truths = span_dataset
+        with pytest.raises(NotImplementedError):
+            self.pipeline.calibrate(texts, truths)
+
     def test_evaluate_on_training_data(self, span_dataset):
         """Check that `evaluate` returns span metrics and keeps them."""
         texts, truths = span_dataset

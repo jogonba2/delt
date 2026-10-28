@@ -4,6 +4,13 @@ import requests
 
 from delt import AudioPipeline
 
+
+# Define a helper function to download audios
+def download_audio(url: str) -> bytes:
+    """Download an audio from a direct HTTP(S) URL and return it as bytes."""
+    return requests.get(url).content
+
+
 # Instantiate the pipeline
 label_verbalizations = {"bell": "bell", "morse": "morse"}
 prompt_template = "That sound is a {}"
@@ -14,25 +21,37 @@ pipeline = AudioPipeline(
 )
 
 # Zero-shot prediction
-test_bell = requests.get(
-    "https://soundcamp.org/sounds/382/RECEPTION_BELL_oVn.wav"
-).content
-test_morse = requests.get(
-    "https://soundcamp.org/sounds/382/morse_code_oscillator_-_medium_pitched_PTv.wav"
-).content
-test_audios = [test_bell, test_morse]
+test_audios = [
+    download_audio("https://soundcamp.org/sounds/382/RECEPTION_BELL_oVn.wav"),
+    download_audio(
+        "https://soundcamp.org/sounds/382/morse_code_oscillator_-_low_pitched_NzH.wav"
+    ),
+]
 preds = pipeline.predict(test_audios, batch_size=8)
 
 # Label-tuning training
-train_bell = requests.get(
-    "https://soundcamp.org/sounds/382/BELL_TOLL_WITH_BARK_u78.wav"
-).content
-train_morse = requests.get(
-    "https://soundcamp.org/sounds/382/morse_code_oscillator_-_medium_pitched_PTv.wav"
-).content
-train_audios = [test_morse, test_bell]
-train_truths = ["morse", "bell"]
+train_audios = [
+    download_audio(
+        "https://soundcamp.org/sounds/382/BELL_TOLL_WITH_BARK_u78.wav"
+    ),
+    download_audio(
+        "https://soundcamp.org/sounds/382/morse_code_oscillator_-_medium_pitched_PTv.wav"
+    ),
+]
+train_truths = ["bell", "morse"]
 training_output = pipeline.fit(train_audios, train_truths)
+
+# Calibrate
+calibration_audios = [
+    download_audio(
+        "https://soundcamp.org/sounds/382/BELL_AND_CAR_PASSING_BY_brO.wav"
+    ),
+    download_audio(
+        "https://soundcamp.org/sounds/382/morse_code_oscillator_-_high_pitched_K29.wav"
+    ),
+]
+calibration_truths = ["bell", "morse"]
+calibrator = pipeline.calibrate(calibration_audios, calibration_truths)
 
 # Prediction after training
 preds = pipeline.predict(test_audios, batch_size=8)
