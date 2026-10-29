@@ -44,10 +44,10 @@ def expected_calibration_error(
 
 
 def evaluate(
-    input_embeddings: torch.Tensor | list,
-    label_embeddings: torch.Tensor | list,
+    input_embeddings: torch.Tensor | list | np.ndarray,
+    label_embeddings: torch.Tensor | list | np.ndarray,
     logit_scale: torch.Tensor,
-    truths: torch.Tensor | list,
+    truths: torch.Tensor | list | np.ndarray,
     label_names: list[str] | None = None,
     batch_size: int = 16,
     calibrator: Calibrator | None = None,
@@ -56,10 +56,10 @@ def evaluate(
     Compute classification metrics on a held-out set.
 
     Args:
-        input_embeddings (torch.Tensor | list): the input embeddings with shape (N, d).
-        label_embeddings (torch.Tensor | list): the label embeddings with shape (L, d).
+        input_embeddings (torch.Tensor | list | np.ndarray): the input embeddings with shape (N, d).
+        label_embeddings (torch.Tensor | list | np.ndarray): the label embeddings with shape (L, d).
         logit_scale (torch.Tensor): the logit scale in log space with shape (1,), i.e., the logits are multiplied by `logit_scale.exp()`.
-        truths (torch.Tensor | list): reference labels as integers (or label names, if `label_names` is set) with shape (N,) or expected probabilities with shape (N, L).
+        truths (torch.Tensor | list | np.ndarray): reference labels as integers (or label names, if `label_names` is set) with shape (N,) or expected probabilities with shape (N, L).
         label_names (list[str] | None): the names of the labels, in the same order as `label_embeddings`.
         batch_size (int): the batch size for inference.
         calibrator (Calibrator | None): a fitted calibrator to apply to the probabilities. If `None`, probabilities are not calibrated.
@@ -68,11 +68,6 @@ def evaluate(
         dict: number of samples, accuracy, expected calibration error (`ece`), macro and weighted F1, and precision, recall, F1 and support per label.
 
     """
-    if isinstance(input_embeddings, list):
-        input_embeddings = torch.tensor(input_embeddings)
-    if isinstance(label_embeddings, list):
-        label_embeddings = torch.tensor(label_embeddings)
-
     truth_indices = torch.as_tensor(labels_to_indices(truths, label_names))
     if truth_indices.dim() > 1:
         truth_indices = truth_indices.argmax(-1)
@@ -83,7 +78,7 @@ def evaluate(
     )
     preds = probas.argmax(-1)
 
-    indices = list(range(label_embeddings.shape[0]))
+    indices = list(range(len(label_embeddings)))
     names = label_names if label_names is not None else map(str, indices)
     precision, recall, f1, support = precision_recall_fscore_support(
         y_true, preds, labels=indices, zero_division=0

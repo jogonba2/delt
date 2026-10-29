@@ -10,8 +10,9 @@ from torch.nn import functional as F
 from tqdm import tqdm
 
 from delt.common import dict_cartesian_product, unimodal_kfold
+from delt.defaults import DEFAULT_LOGIT_SCALE, MAX_LOGIT_SCALE
 from delt.predict import predict
-from delt.types import DEFAULT_LOGIT_SCALE, MAX_LOGIT_SCALE, TrainingOutput
+from delt.types import TrainingOutput
 
 GRID_SEARCH_PARAMS = {
     "learning_rate": [1e-2, 1e-1],
@@ -40,9 +41,9 @@ def compute_class_weights(truths: torch.Tensor) -> torch.Tensor:
 
 
 def label_tuning(
-    input_embeddings: torch.Tensor | list,
-    label_embeddings: torch.Tensor | list,
-    truths: torch.Tensor | list,
+    input_embeddings: torch.Tensor | list | np.ndarray,
+    label_embeddings: torch.Tensor | list | np.ndarray,
+    truths: torch.Tensor | list | np.ndarray,
     epochs: int = 2000,
     apply_class_weights: bool = False,
     learning_rate: float = 1e-2,
@@ -53,9 +54,9 @@ def label_tuning(
     Run label tuning given a fixed set of hyperparams.
 
     Args:
-        input_embeddings (torch.Tensor | list): the input embeddings with shape (N, d)
-        label_embeddings (torch.Tensor | list): the label embeddings with shape (N, d).
-        truths (torch.Tensor | list): reference labels as integers with shape (N,) or expected probabilities with shape (N, classes).
+        input_embeddings (torch.Tensor | list | np.ndarray): the input embeddings with shape (N, d)
+        label_embeddings (torch.Tensor | list | np.ndarray): the label embeddings with shape (L, d).
+        truths (torch.Tensor | list | np.ndarray): reference labels as integers with shape (N,) or expected probabilities with shape (N, classes).
         epochs (int): training epochs.
         apply_class_weights (bool): whether to use class weighting or not.
         learning_rate (float): the learning rate.
@@ -63,33 +64,32 @@ def label_tuning(
         drift_coefficient (float): regularization to preserve how much the tuned label embedings can diverge from the initial ones.
 
     Returns:
-        TrainingOutput: containing the tuned label embeddings (N, d), logit scale (1,), training time, and other outputs for inspecting training.
+        TrainingOutput: containing the tuned label embeddings (L, d), logit scale (1,), training time, and other outputs for inspecting training.
 
     """
     # Ensure we deal with tensors
-    if isinstance(input_embeddings, list):
-        input_embeddings = torch.tensor(input_embeddings)
+    input_embeddings = torch.as_tensor(
+        input_embeddings, dtype=torch.float32
+    ).detach()
 
-    if isinstance(label_embeddings, list):
-        label_embeddings = torch.tensor(label_embeddings)
+    label_embeddings = torch.as_tensor(
+        label_embeddings, dtype=torch.float32, device=input_embeddings.device
+    ).detach()
 
-    if isinstance(truths, list):
-        truths = torch.tensor(truths)
-
-    # Move everything to the same device
-    truths = truths.to(input_embeddings.device)
+    truths = torch.as_tensor(truths, device=input_embeddings.device).detach()
+    truths = truths.long() if truths.ndim == 1 else truths.float()
 
     # Normalize the initial label embeddings, as the tuned ones are,
     # so the drift loss only measures how much they moved
-    label_embeddings = F.normalize(
-        label_embeddings.to(input_embeddings.device), p=2, dim=1
-    )
+    label_embeddings = F.normalize(label_embeddings, p=2, dim=1)
 
     # Prepare parameters to train
     trainable_label_embeddings = nn.Parameter(
         label_embeddings.clone(), requires_grad=True
     )
-    logit_scale = nn.Parameter(torch.tensor(DEFAULT_LOGIT_SCALE))
+    logit_scale = nn.Parameter(
+        torch.tensor(DEFAULT_LOGIT_SCALE, device=input_embeddings.device)
+    )
 
     # Instantiate optimizer and loss
     optimizer = torch.optim.AdamW(
@@ -169,9 +169,9 @@ def label_tuning(
 
 
 def label_tuning_cv(
-    input_embeddings: torch.Tensor | list,
-    label_embeddings: torch.Tensor | list,
-    truths: torch.Tensor | list,
+    input_embeddings: torch.Tensor | list | np.ndarray,
+    label_embeddings: torch.Tensor | list | np.ndarray,
+    truths: torch.Tensor | list | np.ndarray,
     num_splits: int = 4,
 ) -> TrainingOutput:
     """
@@ -180,18 +180,16 @@ def label_tuning_cv(
     Determines the best hyper-params through k-fold cv.
 
     Args:
-        input_embeddings (torch.Tensor | list): the input embeddings with shape (N, d).
-        label_embeddings (torch.Tensor | list): the label embeddings with shape (N, d).
+        input_embeddings (torch.Tensor | list | np.ndarray): the input embeddings with shape (N, d).
+        label_embeddings (torch.Tensor | list | np.ndarray): the label embeddings with shape (L, d).
         truths (torch.Tensor | list): reference labels as integers with shape (N,) or expected probabilities with shape (N, classes).
         num_splits (int): K folds.
 
     Returns:
-        TrainingOutput: containing the tuned label embeddings (N, d), logit scale (1,), training time, and other outputs for monitoring training.
+        TrainingOutput: containing the tuned label embeddings (L, d), logit scale (1,), training time, and other outputs for monitoring training.
 
     """
-    if isinstance(truths, list):
-        truths = torch.tensor(truths)
-
+    truths = torch.as_tensor(truths)
     n_samples = len(truths)
     _, counts = torch.unique(truths, return_counts=True)
     min_class_size = counts.min().item()

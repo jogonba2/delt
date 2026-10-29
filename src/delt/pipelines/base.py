@@ -6,27 +6,29 @@ from datetime import datetime, timezone
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
+import numpy as np
 import torch
 from safetensors.torch import load_file, save_file
 
 from delt.calibrators import Calibrator, get_calibrator, load_calibrator
 from delt.calibrators.utils import to_targets
 from delt.common import format_prompt, labels_to_indices
+from delt.defaults import (
+    DEFAULT_LOGIT_SCALE,
+    EMBEDDINGS_FILENAME,
+    INFO_FILENAME,
+)
 from delt.encoders import get_encoder
 from delt.evaluate import evaluate as compute_metrics
 from delt.predict import predict, predict_proba
 from delt.train import label_tuning, label_tuning_cv
 from delt.types import (
-    DEFAULT_LOGIT_SCALE,
     Audio,
     Image,
     Prediction,
     TrainingOutput,
     Video,
 )
-
-INFO_FILENAME = "model.json"
-EMBEDDINGS_FILENAME = "label_embeddings.safetensors"
 
 
 def _read_model(
@@ -64,7 +66,7 @@ class EmbeddingPipeline(ABC):
 
     def __init__(
         self,
-        label_embeddings: torch.Tensor | list,
+        label_embeddings: torch.Tensor | list | np.ndarray,
         logit_scale: torch.Tensor | None = None,
         label_names: list[str] | None = None,
     ) -> None:
@@ -72,7 +74,7 @@ class EmbeddingPipeline(ABC):
         Initialize an embedding-based pipeline.
 
         Args:
-            label_embeddings (torch.Tensor | list): the label embeddings with shape (N, d).
+            label_embeddings (torch.Tensor | list | np.ndarray): the label embeddings with shape (N, d).
             logit_scale (torch.Tensor | None): the scale factor for the logits in log space with shape (1,), i.e., the logits are multiplied by `logit_scale.exp()`. Defaults to `log(1 / 0.07)`, the initial value used in label tuning, so zero-shot and tuned probabilities are comparable.
             label_names (list[str] | None): the names of the labels, in the same order as `label_embeddings`.
                                             If given, label names can be used in `truths` and are returned
@@ -92,8 +94,8 @@ class EmbeddingPipeline(ABC):
 
     def fit(
         self,
-        input_embeddings: torch.Tensor | list,
-        truths: torch.Tensor | list,
+        input_embeddings: torch.Tensor | list | np.ndarray,
+        truths: torch.Tensor | list | np.ndarray,
         training_args: dict | None = None,
         do_cv: bool = False,
     ) -> TrainingOutput:
@@ -105,8 +107,8 @@ class EmbeddingPipeline(ABC):
         A calibrator fitted with `calibrate` is discarded, since it was fitted on the probabilities of the previous label embeddings.
 
         Args:
-            input_embeddings (torch.Tensor | list): the embedded data with shape (N, d).
-            truths (torch.Tensor | list): reference labels as integers (or label names, if `label_names` is set) with shape (N,) or expected probabilities with shape (N, classes).
+            input_embeddings (torch.Tensor | list | np.ndarray): the embedded data with shape (N, d).
+            truths (torch.Tensor | list | np.ndarray): reference labels as integers (or label names, if `label_names` is set) with shape (N,) or expected probabilities with shape (N, classes).
             training_args (Optional[dict]): training args for label tuning in `delt.train.label_tuning`, e.g., `learning_rate`, `dropout`, and `drift_coefficient`.
             do_cv (bool): whether to do k-fold cross validation in training or not when training with label tuning.
 
@@ -142,8 +144,8 @@ class EmbeddingPipeline(ABC):
 
     def calibrate(
         self,
-        input_embeddings: torch.Tensor | list,
-        truths: torch.Tensor | list,
+        input_embeddings: torch.Tensor | list | np.ndarray,
+        truths: torch.Tensor | list | np.ndarray,
         method: str = "beta",
         batch_size: int = 16,
     ) -> Calibrator:
@@ -155,8 +157,8 @@ class EmbeddingPipeline(ABC):
         Use data that was not used to train the label embeddings, otherwise the probabilities are overconfident and the calibrator will not generalize.
 
         Args:
-            input_embeddings (torch.Tensor | list): the embedded data with shape (N, d).
-            truths (torch.Tensor | list): reference labels as integers (or label names, if `label_names` is set) with shape (N,) or expected probabilities with shape (N, classes).
+            input_embeddings (torch.Tensor | list | np.ndarray): the embedded data with shape (N, d).
+            truths (torch.Tensor | list | np.ndarray): reference labels as integers (or label names, if `label_names` is set) with shape (N,) or expected probabilities with shape (N, classes).
             method (str): calibration method, one of `delt.calibrators.REGISTRY`, e.g., `beta`.
             batch_size (int): the batch size for inference.
 
@@ -164,12 +166,11 @@ class EmbeddingPipeline(ABC):
             Calibrator: the fitted calibrator.
 
         """
-        if isinstance(input_embeddings, list):
-            input_embeddings = torch.tensor(input_embeddings)
-        label_embeddings = torch.as_tensor(self.label_embeddings)
-
         probs = predict_proba(
-            input_embeddings, label_embeddings, self.logit_scale, batch_size
+            input_embeddings,
+            self.label_embeddings,
+            self.logit_scale,
+            batch_size,
         )
         targets = to_targets(
             labels_to_indices(truths, self.label_names), probs.shape[-1]
@@ -179,8 +180,8 @@ class EmbeddingPipeline(ABC):
 
     def evaluate(
         self,
-        input_embeddings: torch.Tensor | list,
-        truths: torch.Tensor | list,
+        input_embeddings: torch.Tensor | list | np.ndarray,
+        truths: torch.Tensor | list | np.ndarray,
         batch_size: int = 16,
     ) -> dict:
         """
@@ -190,8 +191,8 @@ class EmbeddingPipeline(ABC):
         If the pipeline is calibrated (see `calibrate`), the metrics are computed with the calibrated probabilities.
 
         Args:
-            input_embeddings (torch.Tensor | list): the embedded data with shape (N, d).
-            truths (torch.Tensor | list): reference labels as integers (or label names, if `label_names` is set) with shape (N,) or expected probabilities with shape (N, classes).
+            input_embeddings (torch.Tensor | list | np.ndarray): the embedded data with shape (N, d).
+            truths (torch.Tensor | list | np.ndarray): reference labels as integers (or label names, if `label_names` is set) with shape (N,) or expected probabilities with shape (N, classes).
             batch_size (int): the batch size for inference.
 
         Returns:
@@ -212,7 +213,7 @@ class EmbeddingPipeline(ABC):
 
     def predict(
         self,
-        input_embeddings: torch.Tensor | list,
+        input_embeddings: torch.Tensor | list | np.ndarray,
         batch_size: int = 16,
     ) -> list[Prediction]:
         """
@@ -221,7 +222,7 @@ class EmbeddingPipeline(ABC):
         If the pipeline is calibrated (see `calibrate`), the probs are calibrated.
 
         Args:
-            input_embeddings (torch.Tensor | list): the embedded data with shape (N, d).
+            input_embeddings (torch.Tensor | list | np.ndarray): the embedded data with shape (N, d).
             batch_size (int): the batch size for inference.
 
         Returns:

@@ -1,6 +1,5 @@
 """Types and defaults used in modeling."""
 
-import math
 from dataclasses import dataclass
 from typing import TypeAlias
 
@@ -9,9 +8,6 @@ from datasets.features._torchcodec import AudioDecoder
 from PIL import Image as PILImage
 from torchcodec.decoders._video_decoder import VideoDecoder
 
-DEFAULT_LOGIT_SCALE = math.log(1 / 0.07)
-MAX_LOGIT_SCALE = math.log(100)
-
 
 @dataclass
 class Prediction:
@@ -19,6 +15,7 @@ class Prediction:
 
     probs: list[float]
     label: int | str
+    confidence: float
 
 
 @dataclass
